@@ -8,6 +8,8 @@ const supabase = getSupabaseClient();
 export interface User {
   id: string;
   username: string;
+  email?: string;
+  role: 'student' | 'teacher' | 'admin';
   created_at: string;
 }
 
@@ -49,27 +51,25 @@ export async function register(username: string, password: string) {
   }
 }
 
-// Login with username and password
-export async function login(username: string, password: string) {
+// Login with username/email and password
+export async function login(usernameOrEmail: string, password: string) {
   try {
-    // Get user by username (case-insensitive search)
-    const { data: user, error: userError } = await supabase
+    // Get user by username OR email (case-insensitive search)
+    const { data: users, error: userError } = await supabase
       .from('users')
       .select('*')
-      .ilike('username', username) // Use ilike for case-insensitive search
-      .single();
+      .or(`username.ilike.${usernameOrEmail},email.ilike.${usernameOrEmail}`);
 
     if (userError) {
-      // Check if it's a "not found" error
-      if (userError.code === 'PGRST116') {
-        return { error: { message: 'User not found. Please check your username or register first.' } };
-      }
       return { error: { message: `Database error: ${userError.message}` } };
     }
 
-    if (!user) {
-      return { error: { message: 'User not found. Please check your username or register first.' } };
+    if (!users || users.length === 0) {
+      return { error: { message: 'User not found. Please check your username/email or register first.' } };
     }
+
+    // Get the first matching user (there should only be one due to unique constraints)
+    const user = users[0];
 
     // Verify password - check if using hashed or plain text password
     let isValidPassword = false;
@@ -87,13 +87,19 @@ export async function login(username: string, password: string) {
       return { error: { message: 'Invalid password. Please check your password.' } };
     }
 
-    // Store user session in localStorage
+    // Store user session in localStorage and cookie
     if (typeof window !== 'undefined') {
-      localStorage.setItem('currentUser', JSON.stringify({
+      const userData = {
         id: user.id,
         username: user.username,
+        email: user.email,
+        role: user.role,
         created_at: user.created_at
-      }));
+      };
+      localStorage.setItem('currentUser', JSON.stringify(userData));
+      
+      // Also set as cookie for middleware access
+      document.cookie = `currentUser=${encodeURIComponent(JSON.stringify(userData))}; path=/; max-age=86400`;
     }
 
     return { 
@@ -101,6 +107,8 @@ export async function login(username: string, password: string) {
         user: {
           id: user.id,
           username: user.username,
+          email: user.email,
+          role: user.role,
           created_at: user.created_at
         }
       }, 
@@ -116,6 +124,8 @@ export async function logout() {
   try {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('currentUser');
+      // Clear the cookie as well
+      document.cookie = 'currentUser=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;';
     }
     return { error: null };
   } catch (error) {

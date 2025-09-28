@@ -11,7 +11,7 @@ interface LoginModalProps {
 }
 
 const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess }) => {
-  const { refreshUser } = useAuth()
+  const { login: authLogin } = useAuth()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [message, setMessage] = useState('')
@@ -29,14 +29,17 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess
         setMessage(result.error.message)
       } else {
         setMessage('Login successful!')
-        refreshUser() // Update the auth context immediately
+        // Use AuthContext login to handle role-based redirect
+        if (result.data?.user) {
+          authLogin(result.data.user)
+        }
         setTimeout(() => {
           onClose()
           setUsername('')
           setPassword('')
           setMessage('')
           onLoginSuccess?.()
-        }, 1500)
+        }, 1000)
       }
     } catch (err) {
       setMessage('An error occurred during login')
@@ -76,7 +79,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess
                   onChange={(e) => setUsername(e.target.value)}
                   required
                   className="w-full px-4 py-3 border border-light-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-green focus:border-transparent"
-                  placeholder="Enter your email"
+                  placeholder="Enter your username or email"
                 />
               </div>
 

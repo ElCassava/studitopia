@@ -1,9 +1,28 @@
 'use client'
 import Header from "@/components/Header"
 import { useAuth } from '@/common/AuthContext'
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 
 export default function Home() {
   const { user: currentUser, isLoading } = useAuth()
+  const router = useRouter()
+
+  useEffect(() => {
+    // Redirect authenticated users to their appropriate dashboards
+    if (!isLoading && currentUser) {
+      const roleRoutes = {
+        student: '/student',
+        teacher: '/teacher',
+        admin: '/admin'
+      } as const
+      
+      const redirectPath = roleRoutes[currentUser.role]
+      if (redirectPath) {
+        router.push(redirectPath)
+      }
+    }
+  }, [currentUser, isLoading, router])
 
   if (isLoading) {
     return (
