@@ -69,6 +69,7 @@ const Header = () => {
               </Button>
 
               <Button
+                onClick={() => setIsLoginModalOpen(true)}
                 className="bg-white text-bright-green px-9 py-4 rounded-lg text-lg font-semibold border border-light-gray border-b-4 hover:bg-green transition-colors"
               >
                 Register

@@ -1,10 +1,13 @@
 'use client'
+import { useState } from 'react'
 import Header from "@/components/Header"
 import { useAuth } from '@/common/AuthContext'
 import Image from "next/image"
+import LoginModal from "@/components/LoginModal"  // ✅ import modal
 
 export default function Home() {
   const { user: currentUser, isLoading } = useAuth()
+  const [isLoginOpen, setIsLoginOpen] = useState(false) // ✅ modal state
 
   if (isLoading) {
     return (
@@ -22,7 +25,7 @@ export default function Home() {
       <Header />
       <main className="flex min-h-screen flex-col items-center justify-center gap-6 font-nunito bg-white">
         {currentUser ? (
-          // Authenticated user content
+          // ✅ Authenticated user content
           <section className="flex min-h-screen flex-col items-center justify-center gap-6 font-nunito bg-white pt-20">
             <div className="max-w-4xl mx-auto px-6 text-center">
               <h1 className="font-feather text-6xl text-dark-gray mb-6">
@@ -60,7 +63,7 @@ export default function Home() {
             </div>
           </section>
         ) : (
-          // Public/unauthenticated content
+          // ✅ Public/unauthenticated content
           <section className="flex min-h-screen flex-col items-center justify-center gap-6 font-nunito bg-white">
             {/* Background math text */}
             <span className="absolute top-1/4 left-30 text-5xl text-light-gray font-bold select-none">
@@ -85,15 +88,21 @@ export default function Home() {
             <p className="text-xl text-gray-600 text-center max-w-2xl mt-6">
               Discover your style. Go at your pace. Enjoy the ride.
             </p>
+
+            {/* ✅ Get Started opens modal */}
             <div className="flex gap-4 mt-8 z-1">
-              <button className="bg-bright-green text-white px-12 py-3 rounded-lg text-3xl font-semibold border-b-4 border-green">
+              <button
+                onClick={() => setIsLoginOpen(true)}
+                className="bg-bright-green text-white px-12 py-3 rounded-lg text-3xl font-semibold border-b-4 border-green"
+              >
                 Get Started
               </button>
             </div>
+
             {/* Image at the bottom */}
             <div className="absolute bottom-0 flex justify-center w-full z-0">
               <Image
-                src="/images/mascot/Front-Facing-Mascot.png" // put inside /public/images/
+                src="/images/mascot/Front-Facing-Mascot.png"
                 alt="Studitopia Illustration"
                 width={550}
                 height={400}
@@ -103,6 +112,13 @@ export default function Home() {
           </section>
         )}
       </main>
+
+      {/* ✅ Login Modal */}
+      <LoginModal
+        isOpen={isLoginOpen}
+        onClose={() => setIsLoginOpen(false)}
+        onLoginSuccess={() => console.log("✅ Logged in!")}
+      />
     </>
-  );
+  )
 }
