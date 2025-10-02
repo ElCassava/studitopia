@@ -1,9 +1,17 @@
 'use client'
+import { useState } from 'react'
 import Header from "@/components/Header"
 import { useAuth } from '@/common/AuthContext'
+import Image from "next/image"
+import LoginModal from "@/components/LoginModal"  // ✅ import modal
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
+export default function Home() {
+  const { user: currentUser, isLoading } = useAuth()
+  const [isLoginOpen, setIsLoginOpen] = useState(false) // ✅ modal state
+
+  // Dev pnya
 export default function Home() {
   const { user: currentUser, isLoading } = useAuth()
   const router = useRouter()
@@ -23,6 +31,7 @@ export default function Home() {
       }
     }
   }, [currentUser, isLoading, router])
+// >>>
 
   if (isLoading) {
     return (
@@ -40,7 +49,7 @@ export default function Home() {
       <Header />
       <main className="flex min-h-screen flex-col items-center justify-center gap-6 font-nunito bg-white">
         {currentUser ? (
-          // Authenticated user content
+          // ✅ Authenticated user content
           <section className="flex min-h-screen flex-col items-center justify-center gap-6 font-nunito bg-white pt-20">
             <div className="max-w-4xl mx-auto px-6 text-center">
               <h1 className="font-feather text-6xl text-dark-gray mb-6">
@@ -78,41 +87,62 @@ export default function Home() {
             </div>
           </section>
         ) : (
-          // Public/unauthenticated content
+          // ✅ Public/unauthenticated content
           <section className="flex min-h-screen flex-col items-center justify-center gap-6 font-nunito bg-white">
+            {/* Background math text */}
+            <span className="absolute top-1/4 left-30 text-5xl text-light-gray font-bold select-none">
+              3 × 4 = 12
+            </span>
+            <span className="absolute top-1/3 right-30 text-5xl text-light-gray font-bold select-none">
+              4 + 3 = 7
+            </span>
+            <span className="absolute top-1/6 left-180 text-5xl text-light-gray font-bold select-none">
+              8 + 12 = 20
+            </span>
+            <span className="absolute bottom-1/4 left-1/3 text-5xl text-light-gray font-bold select-none">
+              15 ÷ 5 = 3
+            </span>
+            <span className="absolute bottom-1/3 right-1/4 text-5xl text-light-gray font-bold select-none">
+              17 − 7 = 10
+            </span>
+
             <h1 className="font-feather text-7xl text-dark-gray max-w-[990px] text-center">
-              Learning feels better when it&apos;s made for you.
+              Learning feels better when it’s made for you.
             </h1>
             <p className="text-xl text-gray-600 text-center max-w-2xl mt-6">
-              Join thousands of students who are already experiencing personalized education. 
-              Sign up today and discover learning that adapts to you.
+              Discover your style. Go at your pace. Enjoy the ride.
             </p>
-            <div className="flex gap-4 mt-8">
-              <button className="bg-green hover:bg-green/90 text-white px-8 py-3 rounded-lg text-lg font-semibold">
-                Get Started Free
+
+            {/* ✅ Get Started opens modal */}
+            <div className="flex gap-4 mt-8 z-1">
+              <button
+                onClick={() => setIsLoginOpen(true)}
+                className="bg-bright-green text-white px-12 py-3 rounded-lg text-3xl font-semibold border-b-4 border-green"
+              >
+                Get Started
               </button>
-              <button className="border-2 border-green text-green hover:bg-green hover:text-white px-8 py-3 rounded-lg text-lg font-semibold transition-colors">
-                Learn More
-              </button>
+            </div>
+
+            {/* Image at the bottom */}
+            <div className="absolute bottom-0 flex justify-center w-full z-0">
+              <Image
+                src="/images/mascot/Front-Facing-Mascot.png"
+                alt="Studitopia Illustration"
+                width={550}
+                height={400}
+                className="object-contain"
+              />
             </div>
           </section>
         )}
-        
-        {/* Add some content to test scrolling */}
-        <div className="h-[100vh] flex items-center justify-center bg-gray-50">
-          <div className="text-center">
-            <h2 className="text-3xl font-bold text-dark-gray mb-4">
-              {currentUser ? 'Your Learning Dashboard' : 'Why Choose Studitopia?'}
-            </h2>
-            <p className="text-lg text-gray-600">
-              {currentUser 
-                ? 'Access your personalized learning tools and track your progress.'
-                : 'Scroll down to test the sticky header behavior and learn more about our features!'
-              }
-            </p>
-          </div>
-        </div>
       </main>
+
+      {/* ✅ Login Modal */}
+      <LoginModal
+        isOpen={isLoginOpen}
+        onClose={() => setIsLoginOpen(false)}
+        onLoginSuccess={() => console.log("✅ Logged in!")}
+      />
     </>
-  );
+  )
 }
