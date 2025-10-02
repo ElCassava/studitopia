@@ -10,10 +10,6 @@ import { useRouter } from 'next/navigation'
 export default function Home() {
   const { user: currentUser, isLoading } = useAuth()
   const [isLoginOpen, setIsLoginOpen] = useState(false) // ✅ modal state
-
-  // Dev pnya
-export default function Home() {
-  const { user: currentUser, isLoading } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
@@ -145,4 +141,4 @@ export default function Home() {
       />
     </>
   )
-}
+  }
