@@ -19,6 +19,7 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [isHydrated, setIsHydrated] = useState(false)
 
   const refreshUser = () => {
     const currentUser = getCurrentUser()
@@ -26,9 +27,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }
 
   useEffect(() => {
-    // Check authentication status on mount
-    refreshUser()
-    setIsLoading(false)
+    // Use a small timeout to prevent flickering on fast connections
+    const timer = setTimeout(() => {
+      setIsHydrated(true)
+      refreshUser()
+      setIsLoading(false)
+    }, 50) // Very brief delay to prevent flash
+
+    return () => clearTimeout(timer)
 
     // Listen for storage changes to handle login/logout from other tabs
     const handleStorageChange = (e: StorageEvent) => {
@@ -46,16 +52,37 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = (user: User) => {
     setUser(user)
+    
+    // Redirect based on user role after login
+    if (typeof window !== 'undefined') {
+      const roleRoutes = {
+        student: '/student',
+        teacher: '/teacher',
+        admin: '/admin'
+      } as const
+      
+      const redirectPath = roleRoutes[user.role]
+      if (redirectPath) {
+        setTimeout(() => {
+          window.location.href = redirectPath
+        }, 100)
+      }
+    }
   }
 
   const logout = async () => {
     await authLogout()
     setUser(null)
+    
+    // Redirect to home page after logout
+    if (typeof window !== 'undefined') {
+      window.location.href = '/'
+    }
   }
 
   const value: AuthContextType = {
     user,
-    isLoading,
+    isLoading: isLoading || !isHydrated,
     login,
     logout,
     refreshUser

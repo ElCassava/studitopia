@@ -39,6 +39,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess
         setMessage(result.error.message)
       } else {
         setMessage('Login successful!')
+
         refreshUser()
         setTimeout(() => {
           onClose()
@@ -47,7 +48,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess
           setMessage('')
           setStep("email")
           onLoginSuccess?.()
-        }, 1500)
+        }, 1000)
       }
     } catch (err) {
       setMessage('An error occurred during login')
