@@ -93,7 +93,7 @@ const CoursesPage = () => {
 
   const handleContinue = (courseId: string) => {
     // For now, just show an alert. This could navigate to course content later
-    alert(`Continuing course: ${courseId}`)
+    router.push(`/courses/${courseId}`)
   }
 
   if (isLoading) {

@@ -1,5 +1,6 @@
 'use client'
 import React from 'react'
+import { useRouter } from 'next/navigation'
 import { Course } from '@/common/courses'
 
 interface CourseCardProps {
@@ -15,7 +16,14 @@ const CourseCard: React.FC<CourseCardProps> = ({
   onContinue, 
   isEnrolling = false 
 }) => {
-  const handleAction = () => {
+  const router = useRouter()
+
+  const handleCardClick = () => {
+    router.push(`/courses/${course.id}`)
+  }
+
+  const handleButtonClick = (e: React.MouseEvent) => {
+    e.stopPropagation() // Prevent card click when button is clicked
     if (course.is_enrolled && onContinue) {
       onContinue(course.id)
     } else if (!course.is_enrolled && onEnroll) {
@@ -44,7 +52,10 @@ const CourseCard: React.FC<CourseCardProps> = ({
   }
 
   return (
-    <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-lg hover:border-green/30 transition-all duration-200 group">
+    <div 
+      onClick={handleCardClick}
+      className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-lg hover:border-green/30 transition-all duration-200 group cursor-pointer"
+    >
       <div className="flex flex-col h-full">
         <div className="flex-grow">
           {/* Course Status Badge */}
@@ -84,7 +95,7 @@ const CourseCard: React.FC<CourseCardProps> = ({
           )}
           
           <button
-            onClick={handleAction}
+            onClick={handleButtonClick}
             disabled={isEnrolling}
             className={`w-full text-white px-4 py-3 rounded-lg font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md transform hover:-translate-y-0.5 ${getButtonColor()}`}
           >

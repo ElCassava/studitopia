@@ -41,7 +41,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess
           onLoginSuccess?.()
         }, 1000)
       }
-    } catch (err) {
+    } catch {
       setMessage('An error occurred during login')
     } finally {
       setLoading(false)
@@ -117,7 +117,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess
               </Button>
 
               <p className="text-center text-sm text-dark-gray">
-                Don't have an account?{' '}
+                Don&apos;t have an account?{' '}
                 <button type="button" className="text-green hover:underline font-semibold">
                   Sign up here
                 </button>

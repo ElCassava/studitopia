@@ -11,13 +11,14 @@ export interface User {
   email?: string;
   role: 'student' | 'teacher' | 'admin';
   created_at: string;
+  learning_style_id?: string;
 }
 
 // Register a new user with username and password
 export async function register(username: string, password: string) {
   try {
     // Check if username already exists (case-insensitive)
-    const { data: existingUser, error: checkError } = await supabase
+    const { data: existingUser } = await supabase
       .from('users')
       .select('username')
       .ilike('username', username)
@@ -94,7 +95,8 @@ export async function login(usernameOrEmail: string, password: string) {
         username: user.username,
         email: user.email,
         role: user.role,
-        created_at: user.created_at
+        created_at: user.created_at,
+        learning_style_id: user.learning_style_id
       };
       localStorage.setItem('currentUser', JSON.stringify(userData));
       
@@ -109,7 +111,8 @@ export async function login(usernameOrEmail: string, password: string) {
           username: user.username,
           email: user.email,
           role: user.role,
-          created_at: user.created_at
+          created_at: user.created_at,
+          learning_style_id: user.learning_style_id
         }
       }, 
       error: null 
@@ -128,7 +131,7 @@ export async function logout() {
       document.cookie = 'currentUser=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;';
     }
     return { error: null };
-  } catch (error) {
+  } catch {
     return { error: { message: 'Logout failed' } };
   }
 }
