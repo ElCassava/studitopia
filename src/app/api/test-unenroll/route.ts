@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseClient } from '@/utils/supabase/client';
+import { createClient } from '@/utils/supabase/server';
 import { unenrollFromCourse } from '@/common/courses';
 
 export async function POST(request: NextRequest) {
@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
 
     console.log('🧪 Testing unenroll functionality for:', { userId, courseId });
     
-    const supabase = getSupabaseClient();
+    const supabase = await createClient();
     
     // First, let's check what data exists before unenrolling
     const { data: courseSections } = await supabase
