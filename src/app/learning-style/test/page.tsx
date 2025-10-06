@@ -4,6 +4,7 @@ import { useAuth } from '@/common/AuthContext'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
+import { getSupabaseClient } from '@/common/network'
 
 const results = [
   {
@@ -121,6 +122,50 @@ const questions = [
 
 type LearningStyle = 'visual' | 'auditory' | 'kinesthetic';
 type Scores = Record<LearningStyle, number>;
+
+const updateUserLearningStyle = async (userId: string, learningStyle: LearningStyle) => {
+  try {
+    const supabase = getSupabaseClient()
+
+    // 1) Get learning_styles.id by name
+    const { data: styleRow, error: styleError } = await supabase
+      .from('learning_styles')
+      .select('id')
+      .ilike('name', learningStyle)
+      .limit(1)
+      .maybeSingle()
+
+    if (styleError || !styleRow?.id) {
+      throw new Error(styleError?.message || 'Learning style not found')
+    }
+
+    // 2) Update users.learning_style_id for current user
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({ learning_style_id: styleRow.id })
+      .eq('id', userId)
+
+    if (updateError) {
+      throw new Error(updateError.message)
+    }
+
+    // 3) Update local user cache if present
+    if (typeof window !== 'undefined') {
+      const userStr = localStorage.getItem('currentUser')
+      if (userStr) {
+        const cached = JSON.parse(userStr)
+        cached.learning_style_id = styleRow.id
+        localStorage.setItem('currentUser', JSON.stringify(cached))
+        document.cookie = `currentUser=${encodeURIComponent(JSON.stringify(cached))}; path=/; max-age=86400`
+      }
+    }
+
+    return true
+  } catch (error) {
+    console.error('Error updating learning style:', error)
+    return false
+  }
+}
 
 export default function LearningStyleTestPage() {
   const { user, isLoading } = useAuth()
@@ -533,7 +578,15 @@ export default function LearningStyleTestPage() {
 
             <div className="flex flex-col items-center gap-3">
               <button
-                onClick={() => router.push('/courses')}
+                onClick={async () => {
+                  if (!user?.id) return
+                  const success = await updateUserLearningStyle(user.id, dominantStyle)
+                  if (success) {
+                    router.push('/courses')
+                  } else {
+                    alert('Failed to save learning style. Please try again.')
+                  }
+                }}
                 className="w-80 bg-bright-green hover:bg-[#5AB126] border-b-4 border-green text-white font-semibold text-2xl px-8 py-3 rounded-lg transition-all"
               >
                 Mari Mulai Belajar
