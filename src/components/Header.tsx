@@ -95,14 +95,20 @@ const Header = () => {
             </nav>
           ) : (
             // Not logged in state
-            <span className='flex gap-4'>
-              <Button 
-                variant="destructive" 
+            <span className="flex gap-4">
+              <Button
                 onClick={() => setIsLoginModalOpen(true)}
+                className="bg-bright-green text-white px-9 py-4 rounded-lg text-lg font-semibold border-b-4 border-green hover:bg-green transition-colors"
               >
                 Login
               </Button>
-              <Button variant="default">Register</Button>
+
+              <Button
+                onClick={() => setIsLoginModalOpen(true)}
+                className="bg-white text-bright-green px-9 py-4 rounded-lg text-lg font-semibold border border-light-gray border-b-4 hover:bg-green transition-colors"
+              >
+                Register
+              </Button>
             </span>
           )}
       </header>
