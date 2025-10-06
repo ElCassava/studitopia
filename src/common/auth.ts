@@ -11,6 +11,7 @@ export interface User {
   email?: string;
   role: 'student' | 'teacher' | 'admin';
   created_at: string;
+  learning_style_id?: string;
 }
 
 // Register a new user with username and password
@@ -94,7 +95,8 @@ export async function login(usernameOrEmail: string, password: string) {
         username: user.username,
         email: user.email,
         role: user.role,
-        created_at: user.created_at
+        created_at: user.created_at,
+        learning_style_id: (user as any).learning_style_id
       };
       localStorage.setItem('currentUser', JSON.stringify(userData));
       
@@ -109,7 +111,8 @@ export async function login(usernameOrEmail: string, password: string) {
           username: user.username,
           email: user.email,
           role: user.role,
-          created_at: user.created_at
+          created_at: user.created_at,
+          learning_style_id: (user as any).learning_style_id
         }
       }, 
       error: null 

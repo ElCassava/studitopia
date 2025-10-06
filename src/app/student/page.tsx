@@ -21,6 +21,9 @@ export default function StudentDashboard() {
       } else {
         router.push('/')
       }
+    } else if (!isLoading && user && user.role === 'student' && !user.learning_style_id) {
+      // Student without learning style should take test first
+      router.push('/learning-style')
     }
   }, [user, isLoading, router])
 
