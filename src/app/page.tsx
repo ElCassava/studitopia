@@ -13,11 +13,11 @@ export default function Home() {
   const router = useRouter()
 
   useEffect(() => {
-    // Redirect authenticated users to their appropriate dashboards
+    // Redirect authenticated users appropriately
     if (!isLoading && currentUser) {
-      // If student has no learning style, go to learning style test first
+      // If student has no learning style, go directly to test
       if (currentUser.role === 'student' && !currentUser.learning_style_id) {
-        router.push('/learning-style')
+        router.push('/learning-style/test')
         return
       }
 
@@ -31,7 +31,6 @@ export default function Home() {
       if (redirectPath) router.push(redirectPath)
     }
   }, [currentUser, isLoading, router])
-// >>>
 
   if (isLoading) {
     return (
@@ -145,4 +144,4 @@ export default function Home() {
       />
     </>
   )
-  }
+}

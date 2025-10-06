@@ -244,7 +244,7 @@ export default function LearningStyleTestPage() {
       <main className="flex flex-col items-center justify-center min-h-screen bg-white px-6 text-center">
         {step === 1 && (
           <div>
-            <h2 className="text-[#6BCB2D] font-bold text-2xl mb-6 leading-snug">
+            <h2 className="text-[#6BCB2D] font-bold text-5xl mb-6 leading-snug">
               Yuk, kita mulai petualangan <br />
               mengenal cara belajarmu!
             </h2>
@@ -261,7 +261,7 @@ export default function LearningStyleTestPage() {
 
             <button
               onClick={handleStart}
-              className="bg-[#6BCB2D] hover:bg-[#5AB126] text-white font-semibold text-lg px-8 py-3 rounded-lg shadow-md transition-all"
+              className="bg-bright-green hover:bg-[#5AB126] border-b-4 border-green text-white font-semibold text-2xl px-8 py-3 rounded-lg transition-all"
             >
               Aku Siap Banget, Ayo Mulai!
             </button>
@@ -270,7 +270,7 @@ export default function LearningStyleTestPage() {
 
         {step === 2 && (
           <div>
-            <h2 className="text-[#6BCB2D] font-bold text-2xl mb-6 leading-snug">
+            <h2 className="text-[#6BCB2D] font-bold text-5xl mb-6 leading-snug">
               Sebelum kita mulai, apakah kamu <br />
               sudah tahu tipe belajar kamu?
             </h2>
@@ -287,13 +287,13 @@ export default function LearningStyleTestPage() {
             <div className="flex flex-col items-center gap-3">
               <button
                 onClick={handleCurious}
-                className="bg-[#6BCB2D] hover:bg-[#5AB126] text-white font-semibold text-lg px-8 py-3 rounded-lg shadow-md transition-all"
+                className="bg-bright-green hover:bg-[#5AB126] border-b-4 border-green text-white font-semibold text-2xl px-8 py-3 rounded-lg transition-all"
               >
                 Belum, Aku Masih Penasaran.
               </button>
               <button
                 onClick={handleKnownStyle}
-                className="bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold text-lg px-8 py-3 rounded-lg border border-gray-200 transition-all"
+                className="bg-gray-100 hover:bg-gray-200 text-dark-gray font-semibold text-lg px-8 py-3 rounded-lg border-t border-l border-r border-gray-200 border-b-4 border-b-gray-300 transition-all"
               >
                 Aku Sudah Tau Gaya Belajarku!
               </button>
@@ -303,7 +303,7 @@ export default function LearningStyleTestPage() {
 
         {(step === 3 || step === 4 || step === 5 || step === 6 || step === 7) && (
           <div className="relative">
-            <h2 className="text-[#6BCB2D] font-bold text-2xl mb-6 leading-snug">
+            <h2 className="text-[#6BCB2D] font-bold text-5xl mb-6 leading-snug">
               Tenang aja! Aku bakal bantu cari tahu <br />
               gaya belajarmu yang paling pas!
             </h2>
@@ -320,16 +320,16 @@ export default function LearningStyleTestPage() {
             <div className="flex flex-col items-center gap-3">
               <button
                 onClick={handleProceed}
-                className="bg-[#6BCB2D] hover:bg-[#5AB126] text-white font-semibold text-lg px-8 py-3 rounded-lg shadow-md transition-all"
+                className="bg-bright-green hover:bg-[#5AB126] border-b-4 border-green text-white font-semibold text-2xl px-8 py-3 rounded-lg transition-all"
               >
-                Oke Ayo!
+                Oke, Ayo Kita Cari Tahu!
               </button>
-              <button
+              {/* <button
                 disabled
-                className="bg-white text-gray-400 font-medium text-sm mt-2 cursor-not-allowed"
+                className="bg-gray-100 hover:bg-gray-200 text-dark-gray font-semibold text-1xl px-8 py-3 rounded-lg border-t border-l border-r border-gray-200 border-b-4 border-b-gray-300 transition-all"
               >
-                Sepertinya Aku Sudah Tau Gaya Belajarku
-              </button>
+                Aku Sudah Tahu Gaya Belajarku
+              </button> */}
             </div>
 
             {step === 4 && (
@@ -345,18 +345,25 @@ export default function LearningStyleTestPage() {
                   ×
                 </button>
 
-                <div className="absolute left-8 bottom-8 select-none">
-                  <Image src="/images/mascot/mascot2.png" alt="Mascot" width={200} height={200} priority />
+                <div className="fixed left-8 bottom-0 select-none">
+                  <Image
+                    src="/images/mascot/Front-Facing-Mascot.png"
+                    alt="Mascot"
+                    width={500}
+                    height={300}
+                    priority
+                  />
                 </div>
 
-                <div className="absolute left-8 bottom-56 bg-white rounded-2xl px-6 py-4 text-left shadow max-w-xl select-none">
-                  <p className="text-[#2E7D1B] text-lg md:text-xl font-semibold">
+
+                <div className="absolute left-20 bottom-80 bg-white rounded-2xl px-6 py-4 text-left shadow max-w-xl select-none">
+                  <p className="text-green text-lg md:text-xl font-semibold">
                     Sebelum mulai, aku mau kasih tau kamu beberapa hal dulu nih
                   </p>
                 </div>
 
                 <p className="absolute right-8 bottom-6 text-white/90 text-sm md:text-base select-none">
-                  Click anywhere to continue
+                  Klik di mana saja untuk melanjutkan
                 </p>
               </div>
             )}
@@ -374,18 +381,24 @@ export default function LearningStyleTestPage() {
                   ×
                 </button>
 
-                <div className="absolute left-8 bottom-8 select-none">
-                  <Image src="/images/mascot/mascot2.png" alt="Mascot" width={200} height={200} priority />
+                <div className="fixed left-8 bottom-0 select-none">
+                  <Image
+                    src="/images/mascot/Front-Facing-Mascot.png"
+                    alt="Mascot"
+                    width={500}
+                    height={300}
+                    priority
+                  />
                 </div>
 
-                <div className="absolute left-8 bottom-56 bg-white rounded-2xl px-6 py-4 text-left shadow max-w-xl select-none">
-                  <p className="text-[#2E7D1B] text-lg md:text-xl font-semibold">
+                <div className="absolute left-20 bottom-80 bg-white rounded-2xl px-6 py-4 text-left shadow max-w-xl select-none">
+                  <p className="text-green text-lg md:text-xl font-semibold">
                     Nanti kamu akan baca beberapa kalimat, lalu pilih jawaban yang paling cocok dengan kamu sekarang.
                   </p>
                 </div>
 
                 <p className="absolute right-8 bottom-6 text-white/90 text-sm md:text-base select-none">
-                  Click anywhere to continue
+                  Klik di mana saja untuk melanjutkan
                 </p>
               </div>
             )}
@@ -403,18 +416,24 @@ export default function LearningStyleTestPage() {
                   ×
                 </button>
 
-                <div className="absolute left-8 bottom-8 select-none">
-                  <Image src="/images/mascot/mascot2.png" alt="Mascot" width={200} height={200} priority />
+                <div className="fixed left-8 bottom-0 select-none">
+                  <Image
+                    src="/images/mascot/Front-Facing-Mascot.png"
+                    alt="Mascot"
+                    width={500}
+                    height={300}
+                    priority
+                  />
                 </div>
 
-                <div className="absolute left-8 bottom-56 bg-white rounded-2xl px-6 py-4 text-left shadow max-w-xl select-none">
-                  <p className="text-[#2E7D1B] text-lg md:text-xl font-semibold">
+                <div className="absolute left-20 bottom-80 bg-white rounded-2xl px-6 py-4 text-left shadow max-w-xl select-none">
+                  <p className="text-green text-lg md:text-xl font-semibold">
                     Jawablah dengan jujur, karena cuma jawaban jujur yang bisa bantu kita tahu cara belajar yang paling asyik buat kamu!
                   </p>
                 </div>
 
                 <p className="absolute right-8 bottom-6 text-white/90 text-sm md:text-base select-none">
-                  Click anywhere to continue
+                  Klik di mana saja untuk melanjutkan
                 </p>
               </div>
             )}
@@ -422,7 +441,6 @@ export default function LearningStyleTestPage() {
             {step === 7 && (
               <div
                 className="fixed inset-0 bg-black/60 z-50"
-                onClick={handleStep7Continue}
               >
                 <button
                   onClick={(e) => { e.stopPropagation(); setStep(5) }}
@@ -432,19 +450,28 @@ export default function LearningStyleTestPage() {
                   ×
                 </button>
 
-                <div className="absolute left-8 bottom-8 select-none">
-                  <Image src="/images/mascot/mascot2.png" alt="Mascot" width={200} height={200} priority />
+                <div className="fixed left-8 bottom-0 select-none">
+                  <Image
+                    src="/images/mascot/Front-Facing-Mascot.png"
+                    alt="Mascot"
+                    width={500}
+                    height={300}
+                    priority
+                  />
                 </div>
 
-                <div className="absolute left-8 bottom-56 bg-white rounded-2xl px-6 py-4 text-left shadow max-w-xl select-none">
-                  <p className="text-[#2E7D1B] text-lg md:text-xl font-semibold">
-                    Kalau sudah siap, klik tombol Mulai Sekarang ya!
+                <div className="absolute left-20 bottom-80 bg-white rounded-2xl px-6 py-4 text-left shadow max-w-xl select-none">
+                  <p className="text-green text-lg md:text-xl font-semibold">
+                    Kalau sudah siap, klik tombol Mulai Sekarang ya!
                   </p>
                 </div>
 
-                <p className="absolute right-8 bottom-6 text-white/90 text-sm md:text-base select-none">
-                  Click anywhere to continue
-                </p>
+                <button
+                  onClick={handleStep7Continue}
+                  className="absolute right-8 bottom-6 bg-bright-green hover:bg-[#5AB126] border-b-4 border-green text-white font-semibold text-2xl px-8 py-3 rounded-lg transition-all"
+                >
+                  Mulai Sekarang!
+                </button>
               </div>
             )}
           </div>
@@ -473,7 +500,7 @@ export default function LearningStyleTestPage() {
                   <button
                     key={index}
                     onClick={() => handleAnswerSelect(option.type as LearningStyle)}
-                    className="bg-[#6BCB2D] hover:bg-[#5AB126] text-white font-semibold text-lg px-8 py-4 rounded-xl shadow-md transition-all text-center"
+                    className="bg-bright-green hover:bg-[#5AB126] border-b-4 border-green text-white font-semibold text-2xl px-8 py-3 rounded-lg transition-all"
                   >
                     {option.text}
                   </button>
@@ -485,7 +512,7 @@ export default function LearningStyleTestPage() {
 
         {step === 9 && dominantStyle && (
           <div>
-            <h2 className="text-[#6BCB2D] font-bold text-2xl mb-6 leading-snug">
+            <h2 className="text-[#6BCB2D] font-bold text-4xl mb-6 leading-snug">
               {results.find(r => r.type === dominantStyle)?.title}
             </h2>
 
@@ -493,7 +520,7 @@ export default function LearningStyleTestPage() {
               <Image
                 src="/images/mascot/mascot4.png"
                 alt="Mascot"
-                width={180}
+                width={280}
                 height={180}
               />
             </div>
@@ -507,13 +534,13 @@ export default function LearningStyleTestPage() {
             <div className="flex flex-col items-center gap-3">
               <button
                 onClick={() => router.push('/courses')}
-                className="bg-[#6BCB2D] hover:bg-[#5AB126] text-white font-semibold text-lg px-8 py-3 rounded-lg shadow-md transition-all"
+                className="w-80 bg-bright-green hover:bg-[#5AB126] border-b-4 border-green text-white font-semibold text-2xl px-8 py-3 rounded-lg transition-all"
               >
                 Mari Mulai Belajar
               </button>
               <button
                 onClick={handleRetakeTest}
-                className="bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold text-lg px-8 py-3 rounded-lg border border-gray-200 transition-all"
+                className="bg-gray-100 hover:bg-gray-200 text-dark-gray font-semibold text-1xl px-8 py-3 rounded-lg border-t border-l border-r border-gray-200 border-b-4 border-b-gray-300 transition-all"
               >
                 Aku Engga Yakin, Coba lagi deh
               </button>
@@ -523,7 +550,7 @@ export default function LearningStyleTestPage() {
 
         {step === 10 && (
           <div>
-            <h2 className="text-[#6BCB2D] font-bold text-2xl mb-6 leading-snug">
+            <h2 className="text-[#6BCB2D] font-bold text-5xl mb-6 leading-snug">
               Wah asyik! Yuk, kita mulai! <br />
               Gaya belajarmu kayak gimana, nih?
             </h2>
@@ -532,7 +559,7 @@ export default function LearningStyleTestPage() {
               <Image
                 src="/images/mascot/mascot3.png"
                 alt="Mascot"
-                width={180}
+                width={280}
                 height={180}
                 priority
               />
@@ -541,27 +568,27 @@ export default function LearningStyleTestPage() {
             <div className="flex flex-col items-center gap-3">
               <button
                 onClick={() => handleStyleSelect('visual')}
-                className="bg-[#6BCB2D] hover:bg-[#5AB126] text-white font-semibold text-lg px-8 py-3 rounded-lg shadow-md transition-all w-64"
+                className="w-70 bg-bright-green hover:bg-[#5AB126] border-b-4 border-green text-white font-semibold text-2xl px-14 py-3 rounded-lg transition-all"
               >
                 Visual
               </button>
               <button
                 onClick={() => handleStyleSelect('auditory')}
-                className="bg-[#6BCB2D] hover:bg-[#5AB126] text-white font-semibold text-lg px-8 py-3 rounded-lg shadow-md transition-all w-64"
+                className="w-70 bg-bright-green hover:bg-[#5AB126] border-b-4 border-green text-white font-semibold text-2xl px-14 py-3 rounded-lg transition-all"
               >
                 Auditori
               </button>
               <button
                 onClick={() => handleStyleSelect('kinesthetic')}
-                className="bg-[#6BCB2D] hover:bg-[#5AB126] text-white font-semibold text-lg px-8 py-3 rounded-lg shadow-md transition-all w-64"
+                className="w-70 bg-bright-green hover:bg-[#5AB126] border-b-4 border-green text-white font-semibold text-2xl px-14 py-3 rounded-lg transition-all"
               >
                 Kinestetik
               </button>
               <button
                 onClick={handleChangeAnswer}
-                className="bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold text-lg px-8 py-3 rounded-lg border border-gray-200 transition-all mt-2"
+                className="bg-gray-100 hover:bg-gray-200 text-dark-gray font-semibold text-1xl px-8 py-3 rounded-lg border-t border-l border-r border-gray-200 border-b-4 border-b-gray-300 transition-all"
               >
-                Aku Masih Belum Tau Gaya Belajarku
+                Aku Masih Belum Tahu Gaya Belajarku
               </button>
             </div>
           </div>
