@@ -18,7 +18,7 @@ export interface User {
 export async function register(username: string, password: string) {
   try {
     // Check if username already exists (case-insensitive)
-    const { data: existingUser, error: checkError } = await supabase
+    const { data: existingUser } = await supabase
       .from('users')
       .select('username')
       .ilike('username', username)
@@ -96,7 +96,7 @@ export async function login(usernameOrEmail: string, password: string) {
         email: user.email,
         role: user.role,
         created_at: user.created_at,
-        learning_style_id: (user as any).learning_style_id
+        learning_style_id: user.learning_style_id
       };
       localStorage.setItem('currentUser', JSON.stringify(userData));
       
@@ -112,7 +112,7 @@ export async function login(usernameOrEmail: string, password: string) {
           email: user.email,
           role: user.role,
           created_at: user.created_at,
-          learning_style_id: (user as any).learning_style_id
+          learning_style_id: user.learning_style_id
         }
       }, 
       error: null 
@@ -131,7 +131,7 @@ export async function logout() {
       document.cookie = 'currentUser=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;';
     }
     return { error: null };
-  } catch (error) {
+  } catch {
     return { error: { message: 'Logout failed' } };
   }
 }

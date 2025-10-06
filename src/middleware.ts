@@ -47,7 +47,7 @@ export function middleware(request: NextRequest) {
           break
         }
       }
-    } catch (error) {
+    } catch {
       // Invalid cookie data, redirect to home
       return NextResponse.redirect(new URL('/', request.url))
     }
