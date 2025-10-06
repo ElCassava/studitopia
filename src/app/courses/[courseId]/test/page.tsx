@@ -159,10 +159,14 @@ export default function TestPage() {
             const questions = testSection.test_questions?.map((q: any, qIndex: number) => {
               const choices = q.test_choices || []
               const correctChoiceText = q.correct_answer
-              const correctIndex = choices.findIndex((choice: any) => choice.choice_text === correctChoiceText)
+              // Fix: Match by the letter prefix (A, B, C, D) instead of exact text
+              const correctIndex = choices.findIndex((choice: any) => 
+                choice.choice_text.startsWith(correctChoiceText + '.')
+              )
               
               return {
-                id: qIndex + 1,
+                id: qIndex + 1, // UI question number (1-based)
+                dbId: q.id, // Actual database question ID for tracking
                 question: q.question_text,
                 options: choices.map((choice: any) => choice.choice_text),
                 correct: correctIndex >= 0 ? correctIndex : 0
@@ -198,10 +202,15 @@ export default function TestPage() {
         title: s.title, 
         hasQuestions: s.questions?.length > 0, 
         styleId: s.style_id,
-        testSectionId: s.test_section_id 
+        testSectionId: (s as any).test_section_id 
       })))
       
       setTestSections(enhancedSections)
+      
+      // If no test sections found, show appropriate message
+      if (enhancedSections.length === 0) {
+        console.log('⚠️ No test content found for this course. Course may need content setup.')
+      }
       
       // Fetch user's learning style name for display
       if (userLearningStyleId) {
@@ -317,17 +326,30 @@ export default function TestPage() {
     const endTime = new Date().toISOString()
     const startTime = new Date(Date.now() - ((test.timeLimit || 30) * 60 * 1000 - timeRemaining * 1000)).toISOString()
 
-    // Prepare detailed answers for analytics
-    const detailedAnswers = test.questions?.map((question: Question, index: number) => {
-      const selectedAnswer = question.id ? selectedAnswers[question.id] : undefined
-      return {
-        questionId: question.id,
-        selectedAnswer: selectedAnswer ? parseInt(selectedAnswer) : null,
-        isCorrect: selectedAnswer && parseInt(selectedAnswer) === question.correct,
+    // Prepare detailed answers for analytics with proper tracking
+    console.log('Preparing detailed answers for submission...')
+    console.log('Selected answers:', selectedAnswers)
+    console.log('Test questions:', test.questions?.map((q: any) => ({ id: q.id, dbId: q.dbId, correct: q.correct })))
+    
+    const detailedAnswers = test.questions?.map((question: any, index: number) => {
+      const selectedAnswerIndex = selectedAnswers[question.id] // Use UI question ID to get user selection
+      const selectedAnswerInt = selectedAnswerIndex ? parseInt(selectedAnswerIndex) : null
+      const isCorrect = selectedAnswerInt !== null && selectedAnswerInt === question.correct
+      
+      const answerDetail = {
+        questionId: question.dbId || question.id, // Database question ID for foreign key
+        uiQuestionId: question.id, // UI question number for reference
+        selectedAnswer: selectedAnswerInt,
+        isCorrect: isCorrect,
         timeSpent: Math.floor(Math.random() * 30) + 10, // Estimate time per question
         answeredAt: new Date().toISOString()
       }
+      
+      console.log(`Question ${question.id}: selected=${selectedAnswerInt}, correct=${question.correct}, isCorrect=${isCorrect}`)
+      return answerDetail
     }) || []
+    
+    console.log('Final detailed answers:', detailedAnswers)
 
     const correctAnswers = detailedAnswers.filter(a => a.isCorrect).length
     const score = Math.round((correctAnswers / (test.questions?.length || 1)) * 100)
@@ -343,7 +365,7 @@ export default function TestPage() {
         body: JSON.stringify({
           userId: user.id,
           courseId: test.course_section_id || test.id,
-          testSectionId: test.test_section_id,
+          testSectionId: (test as any).test_section_id,
           questions: test.questions,
           answers: detailedAnswers,
           score: score,
@@ -354,6 +376,33 @@ export default function TestPage() {
 
       if (!detailedResponse.ok) {
         console.warn('Failed to save detailed test results')
+      } else {
+        const responseData = await detailedResponse.json()
+        console.log('✅ Test results saved:', responseData)
+        
+        // If we have a test attempt ID, track additional student details
+        if (responseData.testAttemptId && detailedAnswers.length > 0) {
+          const trackingResponse = await fetch('/api/track-student-details', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              userId: user.id,
+              courseId: test.course_section_id || test.id,
+              testSectionId: (test as any).test_section_id,
+              testAttemptId: responseData.testAttemptId,
+              detailedAnswers: detailedAnswers
+            }),
+          })
+          
+          if (trackingResponse.ok) {
+            const trackingData = await trackingResponse.json()
+            console.log('✅ Student attempt details tracked:', trackingData)
+          } else {
+            console.warn('⚠️ Failed to track student attempt details')
+          }
+        }
       }
 
       // Also save to general progress tracking (fallback)
@@ -517,8 +566,26 @@ export default function TestPage() {
           {!isTestActive ? (
             /* Test Selection */
             <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {testSections.map((test: CourseSection, index: number) => {
+              {testSections.length === 0 ? (
+                /* No Content State */
+                <div className="bg-white p-12 rounded-lg border border-gray-200 shadow-sm text-center">
+                  <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-6">
+                    <FileText className="h-8 w-8 text-gray-400" />
+                  </div>
+                  <h3 className="font-bold text-xl text-dark-gray mb-4">No Test Content Available</h3>
+                  <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                    This course doesn't have any test content set up yet. Please contact your instructor or check back later.
+                  </p>
+                  <button
+                    onClick={() => router.push(`/courses/${courseId}`)}
+                    className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+                  >
+                    Back to Course Overview
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {testSections.map((test: CourseSection, index: number) => {
                   const result = testResults?.[test.course_section_id || test.id]
                   return (
                     <div key={test.id} className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
@@ -576,6 +643,7 @@ export default function TestPage() {
                   )
                 })}
               </div>
+              )}
               
               {/* Continue to Quiz button when all tests are completed and passed */}
               {testSections.length > 0 && testSections.every(test => {
@@ -594,6 +662,7 @@ export default function TestPage() {
                   </button>
                 </div>
               )}
+              
             </div>
           ) : (
             /* Active Test */

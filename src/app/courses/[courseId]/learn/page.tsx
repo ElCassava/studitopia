@@ -32,8 +32,14 @@ export default function LearnPage() {
 
   // Remove dummy content templates - using real data from database
 
-  const fetchLearnSections = useCallback(async () => {
+  const fetchLearnSections = useCallback(async (forceRefresh = false) => {
     try {
+      // Prevent refetching if sections are already loaded unless forced
+      if (learnSections.length > 0 && !forceRefresh) {
+        console.log('📚 Learn sections already loaded, skipping fetch')
+        return
+      }
+      
       const supabase = getSupabaseClient()
       
       // Get user's learning style from auth context
@@ -94,41 +100,28 @@ export default function LearnPage() {
         }
         
         if (filteredLearnSections.length === 0) {
-          // No matching learn_sections for user's learning style
+          // If no matching sections for user's learning style, show first available section as fallback
           if (learnSections.length > 0) {
-            // There are learn sections but none match user's style - show a message
+            console.log(`⚠️ No sections match user's learning style, using fallback content`)
+            const fallbackSection = learnSections[0]
+            const content = fallbackSection.learn_contents?.[0]
+            
             enhancedSections.push({
-              id: courseSection.id,
+              id: `${courseSection.id}-${fallbackSection.id}`,
               course_section_id: courseSection.id,
               course_id: courseSection.course_id,
               section_type: courseSection.section_type,
               displayIndex: sectionIndex + 1,
-              title: `Learning Section ${sectionIndex + 1}`,
-              content: userLearningStyleId 
-                ? 'This section is not available for your learning style. Please contact your instructor or try a different learning style.'
-                : 'No content available for this section.',
-              image_url: null,
+              title: `Section ${sectionIndex + 1}`,
+              content: content?.description || 'Learning content is available but not optimized for your learning style.',
+              image_url: content?.image_url || null,
               estimatedTime: "15 min",
-              learn_section_id: null,
-              style_id: null
+              learn_section_id: fallbackSection.id,
+              style_id: fallbackSection.style_id
             })
             sectionIndex++
           } else {
-            // No learn_sections at all, create a placeholder
-            enhancedSections.push({
-              id: courseSection.id,
-              course_section_id: courseSection.id,
-              course_id: courseSection.course_id,
-              section_type: courseSection.section_type,
-              displayIndex: sectionIndex + 1,
-              title: `Learning Section ${sectionIndex + 1}`,
-              content: 'No content available for this section.',
-              image_url: null,
-              estimatedTime: "15 min",
-              learn_section_id: null,
-              style_id: null
-            })
-            sectionIndex++
+            console.log(`⏭️  Skipping course section ${courseSection.id} - no learn sections available`)
           }
         } else {
           // Create a section for each matching learn_section
@@ -153,15 +146,25 @@ export default function LearnPage() {
         }
       })
       
-      console.log(`📚 Created ${enhancedSections.length} learn sections for course ${courseId}`)
-      console.log('Section details:', enhancedSections.map(s => ({ 
+      // Remove duplicates based on ID
+      const uniqueSections = enhancedSections.filter((section, index, self) => 
+        index === self.findIndex(s => s.id === section.id)
+      )
+      
+      console.log(`📚 Created ${uniqueSections.length} unique learn sections for course ${courseId}`)
+      console.log('Section details:', uniqueSections.map(s => ({ 
         title: s.title, 
         hasContent: !!s.content, 
         styleId: s.style_id,
         learnSectionId: s.learn_section_id 
       })))
       
-      setLearnSections(enhancedSections)
+      setLearnSections(uniqueSections)
+      
+      // If no content sections found, show appropriate message
+      if (uniqueSections.length === 0) {
+        console.log('⚠️ No learn content found for this course. Course may need content setup.')
+      }
       
       // Fetch user's learning style name for display
       if (userLearningStyleId) {
@@ -189,6 +192,10 @@ export default function LearnPage() {
       
     } catch (error) {
       console.error('Error fetching learn sections:', error)
+      // Set empty array to prevent infinite loop
+      if (learnSections.length === 0) {
+        setLearnSections([])
+      }
     }
   }, [courseId, user])
 
@@ -211,8 +218,8 @@ export default function LearnPage() {
       
       setCourse(courseData)
       
-      // Fetch learn sections and user progress
-      await fetchLearnSections()
+      // Fetch learn sections and user progress (force refresh on initial load)
+      await fetchLearnSections(true)
       
     } catch (err) {
       console.error('Error fetching course details:', err)
@@ -264,8 +271,8 @@ export default function LearnPage() {
         // Update local state using the course_section_id
         setCompletedSectionIds(prev => new Set([...prev, sectionId]))
         
-        // Refresh course data
-        await fetchCourseDetails()
+        // Don't refetch everything - just update local state
+        console.log(`✅ Section ${sectionId} marked as completed`)
         
         // Auto-advance to next section
         if (currentSection < learnSections.length - 1) {
@@ -367,9 +374,9 @@ export default function LearnPage() {
 
   const goToNextSection = () => {
     if (currentSection < learnSections.length - 1) {
-      // Save interactions before moving to next section
+      // Save interactions before moving to next section (but don't await to avoid blocking)
       if (learnSections[currentSection]) {
-        saveLearnInteractions(learnSections[currentSection], 100)
+        saveLearnInteractions(learnSections[currentSection], 100).catch(console.error)
       }
       setCurrentSection(currentSection + 1)
     }
@@ -377,9 +384,9 @@ export default function LearnPage() {
 
   const goToPrevSection = () => {
     if (currentSection > 0) {
-      // Save interactions before moving to previous section
+      // Save interactions before moving to previous section (but don't await to avoid blocking)
       if (learnSections[currentSection]) {
-        saveLearnInteractions(learnSections[currentSection], 50) // Partial completion
+        saveLearnInteractions(learnSections[currentSection], 50).catch(console.error) // Partial completion
       }
       setCurrentSection(currentSection - 1)
     }
@@ -547,37 +554,58 @@ export default function LearnPage() {
 
           {/* Content Area */}
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-            {/* Section List Sidebar */}
-            <div className="lg:col-span-1">
-              <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-                <h3 className="font-bold text-lg text-dark-gray mb-4">Sections</h3>
-                <div className="space-y-2">
-                  {learnSections.map((section: CourseSection, index: number) => (
-                    <button
-                      key={section.id}
-                      onClick={() => setCurrentSection(index)}
-                      className={`w-full text-left p-3 rounded-lg transition-colors flex items-center ${
-                        currentSection === index
-                          ? 'bg-blue-50 border border-blue-200 text-blue-700'
-                          : 'hover:bg-gray-50'
-                      }`}
-                    >
-                      <div className="flex-1">
-                        <div className="text-sm font-medium">{section.title}</div>
-                        <div className="text-xs text-gray-500">{section.estimatedTime}</div>
-                      </div>
-                      {completedSectionIds.has(section.course_section_id || section.id) && (
-                        <CheckCircle className="h-4 w-4 text-green ml-2" />
-                      )}
-                    </button>
-                  ))}
+            {learnSections.length === 0 ? (
+              /* No Content State */
+              <div className="lg:col-span-4">
+                <div className="bg-white p-12 rounded-lg border border-gray-200 shadow-sm text-center">
+                  <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-6">
+                    <BookOpen className="h-8 w-8 text-gray-400" />
+                  </div>
+                  <h3 className="font-bold text-xl text-dark-gray mb-4">No Learning Content Available</h3>
+                  <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                    This course doesn't have any learning content set up yet. Please contact your instructor or check back later.
+                  </p>
+                  <button
+                    onClick={() => router.push(`/courses/${courseId}`)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+                  >
+                    Back to Course Overview
+                  </button>
                 </div>
               </div>
-            </div>
+            ) : (
+              <>
+                {/* Section List Sidebar */}
+                <div className="lg:col-span-1">
+                  <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+                    <h3 className="font-bold text-lg text-dark-gray mb-4">Sections</h3>
+                    <div className="space-y-2">
+                      {learnSections.map((section: CourseSection, index: number) => (
+                        <button
+                          key={section.id}
+                          onClick={() => setCurrentSection(index)}
+                          className={`w-full text-left p-3 rounded-lg transition-colors flex items-center ${
+                            currentSection === index
+                              ? 'bg-blue-50 border border-blue-200 text-blue-700'
+                              : 'hover:bg-gray-50'
+                          }`}
+                        >
+                          <div className="flex-1">
+                            <div className="text-sm font-medium">{section.title}</div>
+                            <div className="text-xs text-gray-500">{section.estimatedTime}</div>
+                          </div>
+                          {completedSectionIds.has(section.course_section_id || section.id) && (
+                            <CheckCircle className="h-4 w-4 text-green ml-2" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
 
-            {/* Main Content */}
-            <div className="lg:col-span-3">
-              <div className="bg-white p-8 rounded-lg border border-gray-200 shadow-sm">
+                {/* Main Content */}
+                <div className="lg:col-span-3">
+                  <div className="bg-white p-8 rounded-lg border border-gray-200 shadow-sm">
                 {currentSectionData && (
                   <>
                     <div className="flex items-center justify-between mb-6">
@@ -702,6 +730,8 @@ export default function LearnPage() {
                 )}
               </div>
             </div>
+              </>
+            )}
           </div>
         </div>
       </main>

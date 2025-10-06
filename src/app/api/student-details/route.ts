@@ -314,8 +314,16 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       student: {
         ...student,
-        learning_style: student.learning_styles ? (Array.isArray(student.learning_styles) ? student.learning_styles[0]?.name : student.learning_styles.name) || 'Not assessed' : 'Not assessed',
-        learning_style_description: student.learning_styles ? (Array.isArray(student.learning_styles) ? student.learning_styles[0]?.description : student.learning_styles.description) || '' : ''
+        learning_style: student.learning_styles ? 
+          (Array.isArray(student.learning_styles) ? 
+            student.learning_styles[0]?.name : 
+            (student.learning_styles as any)?.name
+          ) || 'Not assessed' : 'Not assessed',
+        learning_style_description: student.learning_styles ? 
+          (Array.isArray(student.learning_styles) ? 
+            student.learning_styles[0]?.description : 
+            (student.learning_styles as any)?.description
+          ) || '' : ''
       },
       enrollment: enrollment || null,
       performance: {

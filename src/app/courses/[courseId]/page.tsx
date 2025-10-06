@@ -85,26 +85,76 @@ export default function CourseDetailPage() {
     if (!user || !course) return
 
     try {
-      // Get available sections to determine where to navigate
-      const { getNextAvailableSections } = await import('@/common/courses')
-      const availableSections = await getNextAvailableSections(user.id, courseId)
+      // Get detailed progress information to make smart routing decisions
+      const { getUserCourseProgress, getNextAvailableSections } = await import('@/common/courses')
       
-      if (!availableSections) {
-        // If no available sections data, default to learn page
+      const [progressData, availableSections] = await Promise.all([
+        getUserCourseProgress(user.id, courseId),
+        getNextAvailableSections(user.id, courseId)
+      ])
+      
+      if (!progressData || !availableSections) {
+        // If no progress data, start with learn page
         router.push(`/courses/${courseId}/learn`)
         return
       }
 
-      // Priority: Learn first, then Test, then Quiz (Learn → Test → Quiz flow)
-      if (availableSections.learn.length > 0) {
+      // Smart routing logic:
+      // 1. If learn sections not completed -> go to learn page
+      // 2. If learn completed but test not completed -> go to test page  
+      // 3. If learn + test completed but quiz not completed -> go to quiz page
+      // 4. If everything completed -> go to course overview for review
+
+      // Check section completion status by type
+      const learnSections = progressData.sectionProgress.filter(s => s.section_type === 'learn')
+      const testSections = progressData.sectionProgress.filter(s => s.section_type === 'test')
+      const quizSections = progressData.sectionProgress.filter(s => s.section_type === 'quiz')
+
+      const learnCompleted = learnSections.length > 0 && learnSections.every(s => s.completed)
+      const testCompleted = testSections.length > 0 && testSections.every(s => s.completed)
+      const quizCompleted = quizSections.length > 0 && quizSections.every(s => s.completed)
+
+      console.log('🧭 Smart navigation check:', {
+        learnSections: learnSections.length,
+        testSections: testSections.length,
+        quizSections: quizSections.length,
+        learnCompleted,
+        testCompleted, 
+        quizCompleted,
+        availableLearn: availableSections.learn.length,
+        availableTest: availableSections.test.length,
+        availableQuiz: availableSections.quiz.length,
+        progressData: progressData.sectionProgress,
+        availableSections
+      })
+
+      // Navigate based on completion status and available sections
+      if (!learnCompleted && availableSections.learn.length > 0) {
+        // Still have learn sections to complete
         router.push(`/courses/${courseId}/learn`)
-      } else if (availableSections.test.length > 0) {
+      } else if (learnCompleted && !testCompleted && availableSections.test.length > 0) {
+        // Learn completed, move to test
         router.push(`/courses/${courseId}/test`)
-      } else if (availableSections.quiz.length > 0) {
+      } else if (learnCompleted && testCompleted && !quizCompleted && availableSections.quiz.length > 0) {
+        // Learn and test completed, move to quiz
         router.push(`/courses/${courseId}/quiz`)
+      } else if (learnCompleted && testCompleted && quizCompleted) {
+        // Everything completed, stay on course overview for review
+        alert('🎉 Congratulations! You have completed all sections of this course.')
+        return
       } else {
-        // All sections completed, still go to learn to review
-        router.push(`/courses/${courseId}/learn`)
+        // Fallback: go to the first available section type
+        if (availableSections.learn.length > 0) {
+          router.push(`/courses/${courseId}/learn`)
+        } else if (availableSections.test.length > 0) {
+          router.push(`/courses/${courseId}/test`)
+        } else if (availableSections.quiz.length > 0) {
+          router.push(`/courses/${courseId}/quiz`)
+        } else {
+          // No available sections, course might be completed
+          alert('All course sections are completed! Great job!')
+          return
+        }
       }
     } catch (error) {
       console.error('Error determining next content:', error)
@@ -518,44 +568,11 @@ export default function CourseDetailPage() {
                   </div>
                 </div>
               </div>
+         
             </div>
+                
           </div>
-
-          {/* Demo Progress Controls (for testing) */}
-          {course.is_enrolled && (
-            <div className="bg-yellow-50 p-6 rounded-lg border border-yellow-200 shadow-sm">
-              <h2 className="text-xl font-bold text-dark-gray mb-4">🚧 Demo Progress Controls (Testing)</h2>
-              <p className="text-sm text-gray-600 mb-4">
-                These buttons simulate completing sections to test the progress tracking system.
-              </p>
-              <div className="flex flex-wrap gap-3">
-                <button
-                  onClick={() => handleSectionComplete('learn')}
-                  className="px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg transition-colors text-sm"
-                >
-                  Complete Learn Section
-                </button>
-                <button
-                  onClick={() => handleSectionComplete('test')}
-                  className="px-4 py-2 bg-orange-100 hover:bg-orange-200 text-orange-700 rounded-lg transition-colors text-sm"
-                >
-                  Complete Test Section
-                </button>
-                <button
-                  onClick={() => handleSectionComplete('quiz')}
-                  className="px-4 py-2 bg-green-100 hover:bg-green-200 text-green-700 rounded-lg transition-colors text-sm"
-                >
-                  Complete Quiz Section
-                </button>
-                <button
-                  onClick={handleResetProgress}
-                  className="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition-colors text-sm"
-                >
-                  Reset Progress
-                </button>
-              </div>
-            </div>
-          )}
+           <br />
         </div>
       </main>
     </>
