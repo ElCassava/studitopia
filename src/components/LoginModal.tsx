@@ -50,7 +50,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess
           onLoginSuccess?.()
         }, 1000)
       }
-    } catch (err) {
+    } catch {
       setMessage('An error occurred during login')
     } finally {
       setLoading(false)

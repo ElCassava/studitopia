@@ -1,4 +1,4 @@
-// Course-related API functions using Supabase
+// Course-related API functions using Supabase - Real Database Only
 import { getSupabaseClient, getSupabaseAdminClient } from './network';
 
 const supabase = getSupabaseClient();
@@ -13,6 +13,18 @@ export interface Course {
   updated_at?: string;
   is_enrolled?: boolean;
   progress?: number;
+  // Additional course details
+  title?: string;
+  instructor?: string;
+  duration?: string;
+  level?: string;
+  rating?: number;
+  students?: number;
+  sections?: {
+    learn: number;
+    test: number;
+    quiz: number;
+  };
 }
 
 // Interface for enrollment data
@@ -21,77 +33,58 @@ export interface Enrollment {
   user_id: string;
   course_id: string;
   enrolled_at: string;
-  progress?: number;
+  progress_percentage?: number;
 }
 
-// Mock courses data for demonstration
-const mockCourses: Course[] = [
-  {
-    id: '1',
-    course_name: 'Introduction to JavaScript',
-    description: 'Learn the fundamentals of JavaScript programming including variables, functions, loops, and DOM manipulation. Perfect for beginners starting their web development journey.'
-  },
-  {
-    id: '2',
-    course_name: 'Advanced React Development',
-    description: 'Master React concepts like hooks, context API, performance optimization, and testing. Build scalable applications with modern React patterns.'
-  },
-  {
-    id: '3',
-    course_name: 'Python for Data Science',
-    description: 'Explore data analysis and machine learning using Python. Learn pandas, numpy, matplotlib, and scikit-learn for real-world data projects.'
-  },
-  {
-    id: '4',
-    course_name: 'Web Design Fundamentals',
-    description: 'Create beautiful and user-friendly websites. Cover HTML, CSS, responsive design, and modern UI/UX principles.'
-  },
-  {
-    id: '5',
-    course_name: 'Database Management',
-    description: 'Master SQL and database design principles. Learn to create, query, and optimize databases for web applications.'
-  },
-  {
-    id: '6',
-    course_name: 'Node.js Backend Development',
-    description: 'Build scalable server-side applications with Node.js. Cover Express.js, API development, authentication, and deployment.'
-  },
-  {
-    id: '7',
-    course_name: 'Digital Marketing Strategy',
-    description: 'Learn modern digital marketing techniques including SEO, social media marketing, content strategy, and analytics.'
-  },
-  {
-    id: '8',
-    course_name: 'Mobile App Development',
-    description: 'Build cross-platform mobile applications using React Native. Learn navigation, state management, and app store deployment.'
-  },
-  {
-    id: '9',
-    course_name: 'Machine Learning Basics',
-    description: 'Introduction to machine learning algorithms, supervised and unsupervised learning, and practical applications using Python libraries.'
-  },
-  {
-    id: '10',
-    course_name: 'Cloud Computing with AWS',
-    description: 'Learn cloud infrastructure, deployment strategies, and AWS services. Build scalable applications in the cloud.'
-  },
-  {
-    id: '11',
-    course_name: 'Cybersecurity Fundamentals',
-    description: 'Understand security principles, threat detection, and protection strategies for modern digital systems.'
-  },
-  {
-    id: '12',
-    course_name: 'UI/UX Design Principles',
-    description: 'Master user interface and user experience design. Learn design thinking, prototyping, and user research methodologies.'
-  }
-];
+// Interface for section progress tracking
+export interface UserSectionProgress {
+  id: string;
+  user_id: string;
+  course_section_id: string;
+  section_type: 'learn' | 'test' | 'quiz';
+  completed: boolean;
+  completed_at?: string;
+  score?: number;
+}
 
-// Fetch all courses
+// Interface for course section
+export interface CourseSection {
+  id: string;
+  course_id: string;
+  section_type: 'learn' | 'test' | 'quiz';
+  created_at?: string;
+  // For composite sections (when multiple learn_sections exist)
+  course_section_id?: string;
+  // Additional properties for learn sections
+  title?: string;
+  content?: string;
+  estimatedTime?: string;
+  description?: string;
+  image_url?: string | null;
+  displayIndex?: number;
+  learn_section_id?: string | null;
+  style_id?: string | null;
+  // Additional properties for test/quiz sections
+  questions?: Question[];
+  // Test-specific properties
+  timeLimit?: number;
+  passingScore?: number;
+}
+
+// Interface for quiz/test questions
+export interface Question {
+  id?: number;
+  question: string;
+  options: string[];
+  correct: number;
+  explanation?: string;
+}
+
+// Fetch all courses from database
 export async function getCourses(searchQuery?: string): Promise<Course[]> {
   try {
-    // Try to fetch from database first
+    console.log('Fetching courses from database');
+    
     let query = supabase
       .from('courses')
       .select('*')
@@ -105,34 +98,15 @@ export async function getCourses(searchQuery?: string): Promise<Course[]> {
     const { data: courses, error } = await query;
 
     if (error) {
-      console.log('Database courses not available, using mock data:', error.message);
-      return filterMockCourses(searchQuery);
+      console.error('Error fetching courses:', error);
+      return [];
     }
 
-    // If no courses in database, return mock data
-    if (!courses || courses.length === 0) {
-      console.log('No courses in database, using mock data');
-      return filterMockCourses(searchQuery);
-    }
-
-    return courses;
+    return courses || [];
   } catch (error) {
-    console.log('Error fetching courses, using mock data:', error);
-    return filterMockCourses(searchQuery);
+    console.error('Error in getCourses:', error);
+    return [];
   }
-}
-
-// Helper function to filter mock courses
-function filterMockCourses(searchQuery?: string): Course[] {
-  if (!searchQuery || !searchQuery.trim()) {
-    return mockCourses;
-  }
-
-  const query = searchQuery.toLowerCase().trim();
-  return mockCourses.filter(course => 
-    course.course_name.toLowerCase().includes(query) ||
-    course.description.toLowerCase().includes(query)
-  );
 }
 
 // Fetch courses for a specific user with enrollment status
@@ -140,60 +114,43 @@ export async function getCoursesForUser(userId: string, searchQuery?: string): P
   try {
     console.log('Fetching courses for user:', userId);
     
-    // First get all courses
+    // Get all courses
     const courses = await getCourses(searchQuery);
     
-    // Check if we're using mock data (simple numeric IDs)
-    const isUsingMockData = courses.length > 0 && /^\d+$/.test(courses[0].id);
-    console.log('Using mock data:', isUsingMockData);
-    
-    let enrolledCourseIds = new Set<string>();
-    
-    if (isUsingMockData && typeof window !== 'undefined') {
-      try {
-        // Get mock enrollments from localStorage (client-side only)
-        const mockEnrollments = JSON.parse(localStorage.getItem('mock_enrollments') || '[]');
-        console.log('Mock enrollments from localStorage:', mockEnrollments);
-        
-        enrolledCourseIds = new Set(
-          mockEnrollments
-            .filter((enrollment: string) => enrollment.startsWith(`${userId}-`))
-            .map((enrollment: string) => enrollment.split('-')[1])
-        );
-        console.log('Enrolled course IDs:', Array.from(enrolledCourseIds));
-      } catch (localStorageError) {
-        console.error('localStorage error in getCoursesForUser:', localStorageError);
-        enrolledCourseIds = new Set();
-      }
-    } else {
-      // Get real enrollments from database using admin client to bypass RLS
-      const client = supabaseAdmin || supabase;
-      
-      const { data: enrollments, error: enrollmentError } = await client
-        .from('enrollments')
-        .select('course_id')
-        .eq('user_id', userId);
-
-      if (enrollmentError) {
-        console.error('Error fetching enrollments:', enrollmentError);
-        return courses.map(course => ({ ...course, is_enrolled: false, progress: 0 }));
-      }
-
-      enrolledCourseIds = new Set(enrollments?.map(e => e.course_id) || []);
-      console.log('Database enrolled course IDs:', Array.from(enrolledCourseIds));
+    if (courses.length === 0) {
+      return [];
     }
+
+    // Get user's enrollments
+    const client = supabaseAdmin || supabase;
+    const { data: enrollments, error: enrollmentError } = await client
+      .from('enrollments')
+      .select('course_id, progress_percentage')
+      .eq('user_id', userId);
+
+    if (enrollmentError) {
+      console.error('Error fetching enrollments:', enrollmentError);
+      return courses.map(course => ({ ...course, is_enrolled: false, progress: 0 }));
+    }
+
+    // Create a map of enrolled courses with their progress
+    const enrollmentMap = new Map();
+    enrollments?.forEach(enrollment => {
+      enrollmentMap.set(enrollment.course_id, enrollment.progress_percentage || 0);
+    });
 
     // Mark courses as enrolled and add progress
     const coursesWithEnrollment = courses.map(course => ({
       ...course,
-      is_enrolled: enrolledCourseIds.has(course.id),
-      progress: enrolledCourseIds.has(course.id) ? Math.floor(Math.random() * 100) : 0
+      is_enrolled: enrollmentMap.has(course.id),
+      progress: enrollmentMap.get(course.id) || 0
     }));
 
     console.log('Courses with enrollment status:', coursesWithEnrollment.map(c => ({ 
       id: c.id, 
       name: c.course_name, 
-      enrolled: c.is_enrolled 
+      enrolled: c.is_enrolled,
+      progress: c.progress
     })));
 
     return coursesWithEnrollment;
@@ -208,36 +165,9 @@ export async function enrollInCourse(userId: string, courseId: string): Promise<
   try {
     console.log('Enrolling user in course:', { userId, courseId });
     
-    // Check if we're using mock data (courseId is a simple string like '1', '2', etc.)
-    const isUsingMockData = /^\d+$/.test(courseId);
-    
-    if (isUsingMockData && typeof window !== 'undefined') {
-      try {
-        // For mock data, store enrollment in localStorage (client-side only)
-        const enrollments = JSON.parse(localStorage.getItem('mock_enrollments') || '[]');
-        const enrollmentKey = `${userId}-${courseId}`;
-        
-        if (!enrollments.includes(enrollmentKey)) {
-          enrollments.push(enrollmentKey);
-          localStorage.setItem('mock_enrollments', JSON.stringify(enrollments));
-          console.log('Mock enrollment added:', enrollmentKey);
-        } else {
-          console.log('User already enrolled in mock course:', enrollmentKey);
-        }
-        
-        return true;
-      } catch (localStorageError) {
-        console.error('localStorage error:', localStorageError);
-        // Fallback: just return true for mock data
-        return true;
-      }
-    }
-
-    // Real database enrollment - use admin client to bypass RLS policies
     const client = supabaseAdmin || supabase;
-    console.log('Using client for enrollment:', client === supabaseAdmin ? 'admin' : 'regular');
     
-    // Check if already enrolled to avoid duplicate enrollments
+    // Check if already enrolled
     const { data: existingEnrollment } = await client
       .from('enrollments')
       .select('id')
@@ -250,16 +180,15 @@ export async function enrollInCourse(userId: string, courseId: string): Promise<
       return true;
     }
 
-    // Insert new enrollment using admin client to bypass RLS
+    // Insert new enrollment
     const { error } = await client
       .from('enrollments')
-      .insert([
-        {
-          user_id: userId,
-          course_id: courseId,
-          enrolled_at: new Date().toISOString()
-        }
-      ]);
+      .insert({
+        user_id: userId,
+        course_id: courseId,
+        enrolled_at: new Date().toISOString(),
+        progress_percentage: 0
+      });
 
     if (error) {
       console.error('Error enrolling in course:', error);
@@ -277,22 +206,6 @@ export async function enrollInCourse(userId: string, courseId: string): Promise<
 // Check if user is enrolled in a course
 export async function isUserEnrolled(userId: string, courseId: string): Promise<boolean> {
   try {
-    // Check if we're using mock data (courseId is a simple string like '1', '2', etc.)
-    const isUsingMockData = /^\d+$/.test(courseId);
-    
-    if (isUsingMockData && typeof window !== 'undefined') {
-      try {
-        // For mock data, check localStorage (client-side only)
-        const enrollments = JSON.parse(localStorage.getItem('mock_enrollments') || '[]');
-        const enrollmentKey = `${userId}-${courseId}`;
-        return enrollments.includes(enrollmentKey);
-      } catch (localStorageError) {
-        console.error('localStorage error in isUserEnrolled:', localStorageError);
-        return false;
-      }
-    }
-
-    // Real database check using admin client to bypass RLS
     const client = supabaseAdmin || supabase;
     const { data, error } = await client
       .from('enrollments')
@@ -301,7 +214,7 @@ export async function isUserEnrolled(userId: string, courseId: string): Promise<
       .eq('course_id', courseId)
       .single();
 
-    if (error && error.code !== 'PGRST116') { // PGRST116 is "not found" error
+    if (error && error.code !== 'PGRST116') {
       console.error('Error checking enrollment:', error);
       return false;
     }
@@ -318,25 +231,6 @@ export async function unenrollFromCourse(userId: string, courseId: string): Prom
   try {
     console.log('Unenrolling user from course:', { userId, courseId });
     
-    // Check if we're using mock data (courseId is a simple string like '1', '2', etc.)
-    const isUsingMockData = /^\d+$/.test(courseId);
-    
-    if (isUsingMockData && typeof window !== 'undefined') {
-      try {
-        // For mock data, remove enrollment from localStorage (client-side only)
-        const enrollments = JSON.parse(localStorage.getItem('mock_enrollments') || '[]');
-        const enrollmentKey = `${userId}-${courseId}`;
-        const updatedEnrollments = enrollments.filter((enrollment: string) => enrollment !== enrollmentKey);
-        localStorage.setItem('mock_enrollments', JSON.stringify(updatedEnrollments));
-        console.log('Mock enrollment removed:', enrollmentKey);
-        return true;
-      } catch (localStorageError) {
-        console.error('localStorage error in unenrollFromCourse:', localStorageError);
-        return false;
-      }
-    }
-
-    // Real database unenrollment using admin client to bypass RLS
     const client = supabaseAdmin || supabase;
     const { error } = await client
       .from('enrollments')
@@ -353,6 +247,444 @@ export async function unenrollFromCourse(userId: string, courseId: string): Prom
     return true;
   } catch (error) {
     console.error('Error in unenrollFromCourse:', error);
+    return false;
+  }
+}
+
+// Get detailed course information by ID
+export async function getCourseById(courseId: string, userId?: string): Promise<Course | null> {
+  try {
+    console.log('Fetching course by ID:', courseId);
+
+    const client = supabaseAdmin || supabase;
+    
+    // Get course basic info
+    const { data: course, error: courseError } = await client
+      .from('courses')
+      .select('*')
+      .eq('id', courseId)
+      .single();
+
+    if (courseError || !course) {
+      console.error('Error fetching course:', courseError);
+      return null;
+    }
+
+    // Get section counts
+    const { data: sections, error: sectionsError } = await client
+      .from('course_sections')
+      .select('section_type')
+      .eq('course_id', courseId);
+
+    const sectionCounts = { learn: 0, test: 0, quiz: 0 };
+    if (sections && !sectionsError) {
+      sections.forEach(section => {
+        if (section.section_type === 'learn') sectionCounts.learn++;
+        else if (section.section_type === 'test') sectionCounts.test++;
+        else if (section.section_type === 'quiz') sectionCounts.quiz++;
+      });
+    }
+
+    // Get enrollment count
+    const { count: enrollmentCount } = await client
+      .from('enrollments')
+      .select('*', { count: 'exact', head: true })
+      .eq('course_id', courseId);
+
+    const studentCount = enrollmentCount || 0;
+
+    // Check enrollment status and progress if userId provided
+    let isEnrolled = false;
+    let progress = 0;
+    
+    if (userId) {
+      const { data: enrollment, error: enrollmentError } = await client
+        .from('enrollments')
+        .select('progress_percentage')
+        .eq('user_id', userId)
+        .eq('course_id', courseId)
+        .single();
+
+      if (!enrollmentError && enrollment) {
+        isEnrolled = true;
+        progress = enrollment.progress_percentage || 0;
+      }
+    }
+
+    return {
+      ...course,
+      title: course.title || course.course_name,
+      instructor: course.instructor || 'Instructor',
+      duration: course.duration || '8 weeks',
+      level: course.level || 'Beginner',
+      rating: course.rating || 4.0,
+      students: studentCount,
+      sections: sectionCounts,
+      is_enrolled: isEnrolled,
+      progress: progress
+    };
+
+  } catch (error) {
+    console.error('Error in getCourseById:', error);
+    return null;
+  }
+}
+
+// Mark a section as completed
+export async function markSectionCompleted(
+  userId: string, 
+  courseId: string, 
+  sectionId: string, 
+  sectionType: 'learn' | 'test' | 'quiz',
+  score?: number
+): Promise<boolean> {
+  try {
+    console.log('Marking section as completed:', { userId, courseId, sectionId, sectionType, score });
+    
+    // Check which client to use
+    if (!supabaseAdmin) {
+      console.log('⚠️ No admin client available - using regular client with RLS');
+      console.log('This app uses custom auth, not Supabase Auth');
+      console.log('RLS policies expect auth.uid() but we use custom user IDs');
+      console.log('This will likely fail unless service role key is configured');
+    }
+    
+    const client = supabaseAdmin || supabase;
+    
+    // Verify the course section exists
+    const { data: courseSection, error: sectionError } = await client
+      .from('course_sections')
+      .select('id, course_id, section_type')
+      .eq('id', sectionId)
+      .single();
+
+    if (sectionError || !courseSection) {
+      console.error('Course section not found:', sectionError);
+      return false;
+    }
+
+    console.log('Course section verified:', courseSection);
+
+    // Check if progress record already exists
+    const { data: existingProgress, error: checkError } = await client
+      .from('user_section_progress')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('course_section_id', sectionId)
+      .maybeSingle();
+
+    if (checkError) {
+      console.error('Error checking existing progress:', checkError);
+      return false;
+    }
+
+    console.log('Existing progress:', existingProgress);
+
+    const progressData = {
+      user_id: userId,
+      course_section_id: sectionId,
+      section_type: sectionType,
+      completed: true,
+      completed_at: new Date().toISOString(),
+      score: score || null
+    };
+
+    if (existingProgress) {
+      // Update existing record
+      console.log('Updating existing progress record...');
+      const { error: updateError } = await client
+        .from('user_section_progress')
+        .update(progressData)
+        .eq('id', existingProgress.id);
+
+      if (updateError) {
+        console.error('Error updating section progress:', updateError);
+        return false;
+      }
+      console.log('Progress record updated successfully');
+    } else {
+      // Insert new record
+      console.log('Inserting new progress record...');
+      const { error: insertError } = await client
+        .from('user_section_progress')
+        .insert([progressData]);
+
+      if (insertError) {
+        console.error('Error inserting section progress:', insertError);
+        return false;
+      }
+      console.log('New progress record inserted successfully');
+    }
+
+    // Update enrollment progress percentage
+    console.log('Updating enrollment progress...');
+    await updateEnrollmentProgress(userId, courseId);
+    
+    console.log(`✅ Section ${sectionId} marked as completed for user ${userId}`);
+    return true;
+  } catch (error) {
+    console.error('❌ Error in markSectionCompleted:', error);
+    return false;
+  }
+}
+
+// Helper function to update enrollment progress
+async function updateEnrollmentProgress(userId: string, courseId: string): Promise<void> {
+  try {
+    const client = supabaseAdmin || supabase;
+    
+    // Get all sections for this course
+    const { data: courseSections } = await client
+      .from('course_sections')
+      .select('id')
+      .eq('course_id', courseId);
+
+    if (!courseSections || courseSections.length === 0) {
+      console.log('No course sections found for course:', courseId);
+      return;
+    }
+
+    // Get completed sections for this user
+    const sectionIds = courseSections.map(s => s.id);
+    const { data: completedSections } = await client
+      .from('user_section_progress')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('completed', true)
+      .in('course_section_id', sectionIds);
+
+    // Calculate progress percentage
+    const totalSections = courseSections.length;
+    const completedCount = completedSections?.length || 0;
+    const progressPercentage = totalSections > 0 ? Math.round((completedCount / totalSections) * 100) : 0;
+
+    console.log(`Progress calculation: ${completedCount}/${totalSections} = ${progressPercentage}%`);
+
+    // Update enrollment progress
+    const { error: updateError } = await client
+      .from('enrollments')
+      .update({ progress_percentage: progressPercentage })
+      .eq('user_id', userId)
+      .eq('course_id', courseId);
+
+    if (updateError) {
+      console.error('Error updating enrollment progress:', updateError);
+    } else {
+      console.log(`✅ Updated enrollment progress to ${progressPercentage}% for user ${userId} in course ${courseId}`);
+    }
+  } catch (error) {
+    console.error('Error in updateEnrollmentProgress:', error);
+  }
+}
+
+// Get user's progress for a specific course
+export async function getUserCourseProgress(userId: string, courseId: string): Promise<{
+  totalSections: number;
+  completedSections: number;
+  progressPercentage: number;
+  sectionProgress: UserSectionProgress[];
+} | null> {
+  try {
+    const client = supabaseAdmin || supabase;
+
+    // Get all sections for this course
+    const { data: courseSections, error: sectionsError } = await client
+      .from('course_sections')
+      .select('id, section_type')
+      .eq('course_id', courseId);
+
+    if (sectionsError || !courseSections) {
+      console.error('Error fetching course sections:', sectionsError);
+      return null;
+    }
+
+    // Get user's progress for these sections
+    const sectionIds = courseSections.map(s => s.id);
+    const { data: userProgress, error: progressError } = await client
+      .from('user_section_progress')
+      .select('*')
+      .eq('user_id', userId)
+      .in('course_section_id', sectionIds);
+
+    if (progressError) {
+      console.error('Error fetching user progress:', progressError);
+      return null;
+    }
+
+    const totalSections = courseSections.length;
+    const completedSections = userProgress?.filter(p => p.completed).length || 0;
+    const progressPercentage = totalSections > 0 ? Math.round((completedSections / totalSections) * 100) : 0;
+
+    return {
+      totalSections,
+      completedSections,
+      progressPercentage,
+      sectionProgress: userProgress || []
+    };
+  } catch (error) {
+    console.error('Error in getUserCourseProgress:', error);
+    return null;
+  }
+}
+
+// Reset user progress for a course
+export async function resetCourseProgress(userId: string, courseId: string): Promise<boolean> {
+  try {
+    console.log('Resetting course progress for user:', userId, 'course:', courseId);
+    
+    const client = supabaseAdmin || supabase;
+
+    // Get all section IDs for this course
+    const { data: courseSections } = await client
+      .from('course_sections')
+      .select('id')
+      .eq('course_id', courseId);
+
+    if (!courseSections || courseSections.length === 0) {
+      return true;
+    }
+
+    const sectionIds = courseSections.map(s => s.id);
+
+    // Delete all progress records
+    const { error } = await client
+      .from('user_section_progress')
+      .delete()
+      .eq('user_id', userId)
+      .in('course_section_id', sectionIds);
+
+    if (error) {
+      console.error('Error resetting course progress:', error);
+      return false;
+    }
+
+    // Update enrollment progress to 0
+    await client
+      .from('enrollments')
+      .update({ progress_percentage: 0 })
+      .eq('user_id', userId)
+      .eq('course_id', courseId);
+
+    console.log(`Course progress reset for user ${userId} in course ${courseId}`);
+    return true;
+  } catch (error) {
+    console.error('Error in resetCourseProgress:', error);
+    return false;
+  }
+}
+
+// Get sections available for completion
+export async function getNextAvailableSections(userId: string, courseId: string): Promise<{
+  learn: CourseSection[];
+  test: CourseSection[];
+  quiz: CourseSection[];
+} | null> {
+  try {
+    console.log('Getting available sections for user:', userId, 'course:', courseId);
+    
+    const client = supabaseAdmin || supabase;
+
+    // Get all sections for this course
+    const { data: courseSections, error: sectionsError } = await client
+      .from('course_sections')
+      .select('id, course_id, section_type')
+      .eq('course_id', courseId)
+      .order('section_type');
+
+    if (sectionsError || !courseSections) {
+      console.error('Error fetching course sections:', sectionsError);
+      return null;
+    }
+
+    // Get completed sections
+    const sectionIds = courseSections.map(s => s.id);
+    const { data: completedSections } = await client
+      .from('user_section_progress')
+      .select('course_section_id')
+      .eq('user_id', userId)
+      .eq('completed', true)
+      .in('course_section_id', sectionIds);
+
+    const completedSectionIds = new Set(completedSections?.map(s => s.course_section_id) || []);
+
+    // Filter available sections
+    const availableSections = courseSections.filter(section => 
+      !completedSectionIds.has(section.id)
+    );
+
+    // Group by type
+    const groupedSections = {
+      learn: availableSections.filter(s => s.section_type === 'learn'),
+      test: availableSections.filter(s => s.section_type === 'test'),
+      quiz: availableSections.filter(s => s.section_type === 'quiz')
+    };
+
+    return groupedSections;
+  } catch (error) {
+    console.error('Error in getNextAvailableSections:', error);
+    return null;
+  }
+}
+
+// Ensure course sections exist
+export async function ensureCourseSectionsExist(courseId: string): Promise<boolean> {
+  try {
+    console.log('Ensuring course sections exist for course:', courseId);
+    
+    const client = supabaseAdmin || supabase;
+
+    // Check existing sections
+    const { data: existingSections, error: checkError } = await client
+      .from('course_sections')
+      .select('id, section_type')
+      .eq('course_id', courseId);
+
+    if (checkError) {
+      console.error('Error checking existing sections:', checkError);
+      return false;
+    }
+
+    // Count existing sections by type
+    const existingCounts = {
+      learn: existingSections?.filter(s => s.section_type === 'learn').length || 0,
+      test: existingSections?.filter(s => s.section_type === 'test').length || 0,
+      quiz: existingSections?.filter(s => s.section_type === 'quiz').length || 0
+    };
+
+    // Target section counts
+    const targetCounts = { learn: 8, test: 2, quiz: 5 };
+    
+    // Create missing sections
+    const sectionsToCreate = [];
+    
+    for (const [type, targetCount] of Object.entries(targetCounts)) {
+      const existingCount = existingCounts[type as keyof typeof existingCounts];
+      const needToCreate = targetCount - existingCount;
+      
+      for (let i = 0; i < needToCreate; i++) {
+        sectionsToCreate.push({
+          course_id: courseId,
+          section_type: type
+        });
+      }
+    }
+
+    if (sectionsToCreate.length > 0) {
+      const { error: insertError } = await client
+        .from('course_sections')
+        .insert(sectionsToCreate);
+
+      if (insertError) {
+        console.error('Error creating course sections:', insertError);
+        return false;
+      }
+
+      console.log(`Created ${sectionsToCreate.length} course sections for course ${courseId}`);
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error in ensureCourseSectionsExist:', error);
     return false;
   }
 }
