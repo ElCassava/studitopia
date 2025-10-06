@@ -187,10 +187,15 @@ export default function QuizPage() {
         title: s.title, 
         hasQuestions: s.questions?.length > 0, 
         styleId: s.style_id,
-        quizSectionId: s.quiz_section_id 
+        quizSectionId: (s as any).quiz_section_id 
       })))
       
       setQuizSections(enhancedSections)
+      
+      // If no quiz sections found, show appropriate message
+      if (enhancedSections.length === 0) {
+        console.log('⚠️ No quiz content found for this course. Course may need content setup.')
+      }
       
       // Fetch user's learning style name for display
       if (userLearningStyleId) {
@@ -365,7 +370,6 @@ export default function QuizPage() {
           body: JSON.stringify({
             userId: user.id,
             courseId: quiz.course_section_id || quiz.id,
-            quizSectionId: quiz.quiz_section_id,
             questions: quiz.questions,
             answers: completeDetailedAnswers,
             score: score,
@@ -520,46 +524,64 @@ export default function QuizPage() {
   return (
     <>
       <Header />
-      <main className="min-h-screen bg-gray-50 pt-20">
-        <div className="max-w-6xl mx-auto px-6 py-8">
-          {/* Back Navigation */}
-          <button
-            onClick={() => router.push(`/courses/${courseId}`)}
-            className="flex items-center text-green hover:text-green/90 mb-6 transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            <span className="font-medium">Back to Course</span>
-          </button>
+    <main className="min-h-screen bg-gray-50 pt-20">
+      <div className="max-w-6xl mx-auto px-6 py-8">
+        {/* Back Navigation */}
+        <button
+          onClick={() => router.push(`/courses/${courseId}`)}
+          className="flex items-center text-green-600 hover:text-green-700 mb-6 transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          <span className="font-medium">Back to Course</span>
+        </button>
 
-          {/* Course Header */}
-          <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
-            <div className="flex items-center">
-              <div className="p-3 bg-green/10 rounded-lg border border-green/20 mr-4">
-                <HelpCircle className="h-6 w-6 text-green" />
-              </div>
-              <div>
-                <h1 className="font-feather text-3xl text-dark-gray">
-                  {course.title || course.course_name} - Quizzes
-                </h1>
-                <p className="text-gray-600">Quick Knowledge Checks</p>
-              </div>
+        {/* Course Header */}
+        <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+          <div className="flex items-center">
+            <div className="p-3 bg-green-50 rounded-lg border border-green-200 mr-4">
+              <HelpCircle className="h-6 w-6 text-green-600" />
+            </div>
+            <div>
+              <h1 className="font-serif text-3xl text-gray-800">
+                {course.title || course.course_name} - Quizzes
+              </h1>
+              <p className="text-gray-600">Quick Knowledge Checks</p>
             </div>
           </div>
+        </div>
 
-          {currentQuizIndex < 0 ? (
-            /* Quiz Selection */
-            <div className="space-y-6">
+        {currentQuizIndex < 0 ? (
+          /* Quiz Selection */
+          <div className="space-y-6">
+            {quizSections.length === 0 ? (
+              /* No Content State */
+              <div className="bg-white p-12 rounded-lg border border-gray-200 shadow-sm text-center">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-6">
+                  <HelpCircle className="h-8 w-8 text-gray-400" />
+                </div>
+                <h3 className="font-bold text-xl text-gray-800 mb-4">No Quiz Content Available</h3>
+                <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                  This course doesn't have any quiz content set up yet. Please contact your instructor or check back later.
+                </p>
+                <button
+                  onClick={() => router.push(`/courses/${courseId}`)}
+                  className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+                >
+                  Back to Course Overview
+                </button>
+              </div>
+            ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {quizSections.map((quiz: CourseSection, index: number) => {
-                  const score = quizScores[quiz.course_section_id || quiz.id]
-                  const hasScore = score !== undefined
+                {quizSections.map((quiz, index) => {
+                  const score = quizScores[quiz.course_section_id || quiz.id];
+                  const hasScore = score !== undefined;
                   return (
                     <div key={quiz.id} className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
                       <div className="flex items-start justify-between mb-4">
-                        <h3 className="font-bold text-lg text-dark-gray">{quiz.title}</h3>
+                        <h3 className="font-bold text-lg text-gray-800">{quiz.title}</h3>
                         {hasScore && (
                           <div className={`flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                            score >= 80 ? 'bg-green/10 text-green' : score >= 60 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-50 text-red-600'
+                            score >= 80 ? 'bg-green-50 text-green-600' : score >= 60 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-50 text-red-600'
                           }`}>
                             {score >= 80 ? (
                               <CheckCircle className="h-4 w-4 mr-1" />
@@ -581,7 +603,7 @@ export default function QuizPage() {
                         <div className="mb-4 p-3 bg-gray-50 rounded-lg">
                           <div className="text-sm text-gray-600 mb-1">Previous Score:</div>
                           <div className={`font-medium ${
-                            score >= 80 ? 'text-green' : score >= 60 ? 'text-yellow-700' : 'text-red-600'
+                            score >= 80 ? 'text-green-600' : score >= 60 ? 'text-yellow-700' : 'text-red-600'
                           }`}>
                             {score}% - {score >= 80 ? 'Excellent' : score >= 60 ? 'Good' : 'Needs Review'}
                           </div>
@@ -593,8 +615,8 @@ export default function QuizPage() {
                           onClick={() => startQuiz(index)}
                           className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
                             hasScore
-                              ? 'bg-green/10 text-green border border-green/20 hover:bg-green/20'
-                              : 'bg-green hover:bg-green/90 text-white'
+                              ? 'bg-green-50 text-green-600 border border-green-200 hover:bg-green-100'
+                              : 'bg-green-600 hover:bg-green-700 text-white'
                           }`}
                         >
                           {hasScore ? 'Retake' : 'Start Quiz'}
@@ -607,198 +629,199 @@ export default function QuizPage() {
                           >
                             <RotateCcw className="h-4 w-4" />
                           </button>
-                      )}
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )
-              })}
+                  );
+                })}
               </div>
+            )}
               
-              {/* Course Complete button when all quizzes are completed */}
-              {quizSections.length > 0 && quizSections.every(quiz => {
-                const score = quizScores[quiz.course_section_id || quiz.id]
-                return score !== undefined
-              }) && (
-                <div className="flex flex-col items-center space-y-4">
-                  <div className="bg-white p-6 rounded-lg border border-green-200 shadow-sm">
-                    <div className="text-center">
-                      <div className="inline-flex items-center justify-center w-16 h-16 bg-green/10 rounded-full mb-4">
-                        <CheckCircle className="h-8 w-8 text-green" />
-                      </div>
-                      <h3 className="font-bold text-xl text-dark-gray mb-2">🎉 Congratulations!</h3>
-                      <p className="text-gray-600 mb-6">
-                        You have completed all sections of this course: Learn → Test → Quiz
-                      </p>
-                      <div className="flex justify-center space-x-4">
-                        <button
-                          onClick={() => router.push(`/courses/${courseId}`)}
-                          className="flex items-center bg-green hover:bg-green/90 text-white px-6 py-3 rounded-lg font-medium transition-colors"
-                        >
-                          Back to Course Overview
-                        </button>
-                        <button
-                          onClick={() => router.push('/courses')}
-                          className="flex items-center bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
-                        >
-                          Explore More Courses
-                        </button>
-                      </div>
+            {/* Course Complete button when all quizzes are completed */}
+            {quizSections.length > 0 && quizSections.every(quiz => {
+              const score = quizScores[quiz.course_section_id || quiz.id];
+              return score !== undefined;
+            }) && (
+              <div className="flex flex-col items-center space-y-4">
+                <div className="bg-white p-6 rounded-lg border border-green-200 shadow-sm">
+                  <div className="text-center">
+                    <div className="inline-flex items-center justify-center w-16 h-16 bg-green-50 rounded-full mb-4">
+                      <CheckCircle className="h-8 w-8 text-green-600" />
+                    </div>
+                    <h3 className="font-bold text-xl text-gray-800 mb-2">🎉 Congratulations!</h3>
+                    <p className="text-gray-600 mb-6">
+                      You have completed all sections of this course: Learn → Test → Quiz
+                    </p>
+                    <div className="flex justify-center space-x-4">
+                      <button
+                        onClick={() => router.push(`/courses/${courseId}`)}
+                        className="flex items-center bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                      >
+                        Back to Course Overview
+                      </button>
+                      <button
+                        onClick={() => router.push('/courses')}
+                        className="flex items-center bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                      >
+                        Explore More Courses
+                      </button>
                     </div>
                   </div>
                 </div>
-              )}
-            </div>
-          ) : (
-            /* Active Quiz */
-            <div className="max-w-3xl mx-auto">
-              <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-                {/* Quiz Header */}
-                <div className="p-6 border-b border-gray-200">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h2 className="font-bold text-2xl text-dark-gray">
-                        {currentQuizData?.title}
-                      </h2>
-                      <p className="text-gray-600">
-                        Question {currentQuestion + 1} of {currentQuizData?.questions?.length || 0}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => setCurrentQuizIndex(-1)}
-                      className="text-gray-400 hover:text-gray-600"
-                    >
-                      ✕
-                    </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          /* Active Quiz */
+          <div className="max-w-3xl mx-auto">
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+              {/* Quiz Header */}
+              <div className="p-6 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="font-bold text-2xl text-gray-800">
+                      {currentQuizData?.title}
+                    </h2>
+                    <p className="text-gray-600">
+                      Question {currentQuestion + 1} of {currentQuizData?.questions?.length || 0}
+                    </p>
                   </div>
-                  
-                  {/* Progress Bar */}
-                  <div className="mt-4">
-                    <div className="bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-green h-2 rounded-full transition-all duration-300"
-                        style={{ 
-                          width: `${((currentQuestion + (showResult ? 1 : 0)) / (currentQuizData?.questions?.length || 1)) * 100}%` 
-                        }}
-                      ></div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Question Content */}
-                <div className="p-8">
-                  {currentQuestionData && (
-                    <>
-                      <h3 className="font-semibold text-xl text-dark-gray mb-6">
-                        {currentQuestionData.question}
-                      </h3>
-                      
-                      <div className="space-y-3 mb-6">
-                        {currentQuestionData.options.map((option: string, index: number) => {
-                          let buttonClass = "w-full text-left p-4 rounded-lg border transition-colors "
-                          
-                          if (showResult) {
-                            if (index === currentQuestionData.correct) {
-                              buttonClass += "border-green bg-green/10 text-green"
-                            } else if (index === selectedAnswer) {
-                              buttonClass += "border-red-300 bg-red-50 text-red-600"
-                            } else {
-                              buttonClass += "border-gray-200 bg-gray-50 text-gray-500"
-                            }
-                          } else {
-                            buttonClass += selectedAnswer === index
-                              ? "border-green bg-green/10 text-green"
-                              : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
-                          }
-
-                          return (
-                            <button
-                              key={index}
-                              onClick={() => !showResult && handleAnswerSelect(index)}
-                              disabled={showResult}
-                              className={buttonClass}
-                            >
-                              <div className="flex items-center">
-                                <div className={`w-4 h-4 rounded-full border-2 mr-3 ${
-                                  showResult
-                                    ? index === currentQuestionData.correct
-                                      ? 'border-green bg-green'
-                                      : index === selectedAnswer
-                                      ? 'border-red-300 bg-red-100'
-                                      : 'border-gray-300'
-                                    : selectedAnswer === index
-                                    ? 'border-green bg-green'
-                                    : 'border-gray-300'
-                                }`}>
-                                  {((showResult && index === currentQuestionData.correct) || 
-                                    (!showResult && selectedAnswer === index)) && (
-                                    <div className="w-2 h-2 bg-white rounded-full mx-auto mt-0.5"></div>
-                                  )}
-                                </div>
-                                <span>{option}</span>
-                                {showResult && index === currentQuestionData.correct && (
-                                  <CheckCircle className="h-4 w-4 ml-auto text-green" />
-                                )}
-                                {showResult && index === selectedAnswer && index !== currentQuestionData.correct && (
-                                  <XCircle className="h-4 w-4 ml-auto text-red-500" />
-                                )}
-                              </div>
-                            </button>
-                          )
-                        })}
-                      </div>
-
-                      {showResult && (
-                        <div className={`p-4 rounded-lg mb-6 ${
-                          selectedAnswer === currentQuestionData.correct
-                            ? 'bg-green/10 border border-green/20'
-                            : 'bg-red-50 border border-red-200'
-                        }`}>
-                          <div className={`font-medium mb-2 ${
-                            selectedAnswer === currentQuestionData.correct ? 'text-green' : 'text-red-600'
-                          }`}>
-                            {selectedAnswer === currentQuestionData.correct ? 'Correct!' : 'Incorrect'}
-                          </div>
-                          <p className="text-gray-700 text-sm">
-                            {currentQuestionData.explanation}
-                          </p>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-
-                {/* Actions */}
-                <div className="p-6 border-t border-gray-200 flex justify-between">
                   <button
                     onClick={() => setCurrentQuizIndex(-1)}
-                    className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                    className="text-gray-400 hover:text-gray-600"
                   >
-                    Back to Quizzes
+                    ✕
                   </button>
-                  
-                  {!showResult ? (
-                    <button
-                      onClick={handleSubmitAnswer}
-                      disabled={selectedAnswer === null}
-                      className="bg-green hover:bg-green/90 text-white px-6 py-2 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Submit Answer
-                    </button>
-                  ) : (
-                    <button
-                      onClick={nextQuestion}
-                      className="bg-green hover:bg-green/90 text-white px-6 py-2 rounded-lg font-medium flex items-center"
-                    >
-                      {currentQuestion === (currentQuizData?.questions?.length || 1) - 1 ? 'Finish Quiz' : 'Next Question'}
-                      <ChevronRight className="h-4 w-4 ml-1" />
-                    </button>
-                  )}
+                </div>
+                
+                {/* Progress Bar */}
+                <div className="mt-4">
+                  <div className="bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-green-600 h-2 rounded-full transition-all duration-300"
+                      style={{ 
+                        width: `${((currentQuestion + (showResult ? 1 : 0)) / (currentQuizData?.questions?.length || 1)) * 100}%` 
+                      }}
+                    ></div>
+                  </div>
                 </div>
               </div>
+
+              {/* Question Content */}
+              <div className="p-8">
+                {currentQuestionData && (
+                  <>
+                    <h3 className="font-semibold text-xl text-gray-800 mb-6">
+                      {currentQuestionData.question}
+                    </h3>
+                    
+                    <div className="space-y-3 mb-6">
+                      {currentQuestionData.options.map((option, index) => {
+                        let buttonClass = "w-full text-left p-4 rounded-lg border transition-colors ";
+                        
+                        if (showResult) {
+                          if (index === currentQuestionData.correct) {
+                            buttonClass += "border-green-600 bg-green-50 text-green-600";
+                          } else if (index === selectedAnswer) {
+                            buttonClass += "border-red-300 bg-red-50 text-red-600";
+                          } else {
+                            buttonClass += "border-gray-200 bg-gray-50 text-gray-500";
+                          }
+                        } else {
+                          buttonClass += selectedAnswer === index
+                            ? "border-green-600 bg-green-50 text-green-600"
+                            : "border-gray-200 hover:border-gray-300 hover:bg-gray-50";
+                        }
+
+                        return (
+                          <button
+                            key={index}
+                            onClick={() => !showResult && handleAnswerSelect(index)}
+                            disabled={showResult}
+                            className={buttonClass}
+                          >
+                            <div className="flex items-center">
+                              <div className={`w-4 h-4 rounded-full border-2 mr-3 ${
+                                showResult
+                                  ? index === currentQuestionData.correct
+                                    ? 'border-green-600 bg-green-600'
+                                    : index === selectedAnswer
+                                    ? 'border-red-300 bg-red-100'
+                                    : 'border-gray-300'
+                                  : selectedAnswer === index
+                                  ? 'border-green-600 bg-green-600'
+                                  : 'border-gray-300'
+                              }`}>
+                                {((showResult && index === currentQuestionData.correct) || 
+                                  (!showResult && selectedAnswer === index)) && (
+                                  <div className="w-2 h-2 bg-white rounded-full mx-auto mt-0.5"></div>
+                                )}
+                              </div>
+                              <span>{option}</span>
+                              {showResult && index === currentQuestionData.correct && (
+                                <CheckCircle className="h-4 w-4 ml-auto text-green-600" />
+                              )}
+                              {showResult && index === selectedAnswer && index !== currentQuestionData.correct && (
+                                <XCircle className="h-4 w-4 ml-auto text-red-500" />
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {showResult && (
+                      <div className={`p-4 rounded-lg mb-6 ${
+                        selectedAnswer === currentQuestionData.correct
+                          ? 'bg-green-50 border border-green-200'
+                          : 'bg-red-50 border border-red-200'
+                      }`}>
+                        <div className={`font-medium mb-2 ${
+                          selectedAnswer === currentQuestionData.correct ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                          {selectedAnswer === currentQuestionData.correct ? 'Correct!' : 'Incorrect'}
+                        </div>
+                        <p className="text-gray-700 text-sm">
+                          {currentQuestionData.explanation}
+                        </p>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+
+              {/* Actions */}
+              <div className="p-6 border-t border-gray-200 flex justify-between">
+                <button
+                  onClick={() => setCurrentQuizIndex(-1)}
+                  className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                >
+                  Back to Quizzes
+                </button>
+                
+                {!showResult ? (
+                  <button
+                    onClick={handleSubmitAnswer}
+                    disabled={selectedAnswer === null}
+                    className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Submit Answer
+                  </button>
+                ) : (
+                  <button
+                    onClick={nextQuestion}
+                    className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium flex items-center"
+                  >
+                    {currentQuestion === (currentQuizData?.questions?.length || 1) - 1 ? 'Finish Quiz' : 'Next Question'}
+                    <ChevronRight className="h-4 w-4 ml-1" />
+                  </button>
+                )}
+              </div>
             </div>
-          )}
-        </div>
-      </main>
+          </div>
+        )}
+      </div>
+    </main>
       
       <LearningStyleRequiredModal
         isOpen={showLearningStyleModal}

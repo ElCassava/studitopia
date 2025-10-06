@@ -1,6 +1,22 @@
 -- WARNING: This schema is for context only and is not meant to be run.
 -- Table order and constraints may not be valid for execution.
 
+CREATE TABLE public.audio_contents (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  title text NOT NULL,
+  description text,
+  audio_url text NOT NULL,
+  bucket_path text NOT NULL,
+  file_size bigint,
+  duration integer,
+  mime_type text DEFAULT 'audio/mpeg'::text,
+  learning_style_id uuid,
+  content_type text CHECK (content_type = ANY (ARRAY['question'::text, 'explanation'::text, 'lesson'::text, 'instruction'::text])),
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT audio_contents_pkey PRIMARY KEY (id),
+  CONSTRAINT audio_contents_learning_style_id_fkey FOREIGN KEY (learning_style_id) REFERENCES public.learning_styles(id)
+);
 CREATE TABLE public.course_sections (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   course_id uuid,

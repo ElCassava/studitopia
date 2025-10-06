@@ -270,19 +270,81 @@ export async function getCourseById(courseId: string, userId?: string): Promise<
       return null;
     }
 
-    // Get section counts
-    const { data: sections, error: sectionsError } = await client
-      .from('course_sections')
-      .select('section_type')
-      .eq('course_id', courseId);
-
+    // Get actual content section counts (not just structural course_sections)
     const sectionCounts = { learn: 0, test: 0, quiz: 0 };
-    if (sections && !sectionsError) {
-      sections.forEach(section => {
-        if (section.section_type === 'learn') sectionCounts.learn++;
-        else if (section.section_type === 'test') sectionCounts.test++;
-        else if (section.section_type === 'quiz') sectionCounts.quiz++;
-      });
+    
+    try {
+      // Count course sections that have learn content (unique sections, not individual learn_sections)
+      const { data: learnCourseSections, error: learnError } = await client
+        .from('course_sections')
+        .select(`
+          id,
+          learn_sections!inner (
+            id
+          )
+        `)
+        .eq('course_id', courseId)
+        .eq('section_type', 'learn');
+      
+      if (learnError) {
+        console.error('Error counting learn course sections:', learnError);
+      } else {
+        sectionCounts.learn = learnCourseSections?.length || 0;
+      }
+      
+      // Count course sections that have test content (unique sections, not individual test_sections)
+      const { data: testCourseSections, error: testError } = await client
+        .from('course_sections')
+        .select(`
+          id,
+          test_sections!inner (
+            id
+          )
+        `)
+        .eq('course_id', courseId)
+        .eq('section_type', 'test');
+      
+      if (testError) {
+        console.error('Error counting test course sections:', testError);
+      } else {
+        sectionCounts.test = testCourseSections?.length || 0;
+      }
+      
+      // Count course sections that have quiz content (unique sections, not individual quiz_sections)
+      const { data: quizCourseSections, error: quizError } = await client
+        .from('course_sections')
+        .select(`
+          id,
+          quiz_sections!inner (
+            id
+          )
+        `)
+        .eq('course_id', courseId)
+        .eq('section_type', 'quiz');
+      
+      if (quizError) {
+        console.error('Error counting quiz course sections:', quizError);
+      } else {
+        sectionCounts.quiz = quizCourseSections?.length || 0;
+      }
+      
+      console.log('Section counts calculated:', sectionCounts);
+      
+    } catch (error) {
+      console.error('Error calculating section counts:', error);
+      // Fallback to counting course_sections if content counting fails
+      const { data: sections } = await client
+        .from('course_sections')
+        .select('section_type')
+        .eq('course_id', courseId);
+      
+      if (sections) {
+        sections.forEach(section => {
+          if (section.section_type === 'learn') sectionCounts.learn++;
+          else if (section.section_type === 'test') sectionCounts.test++;
+          else if (section.section_type === 'quiz') sectionCounts.quiz++;
+        });
+      }
     }
 
     // Get enrollment count

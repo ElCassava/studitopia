@@ -270,10 +270,12 @@ export default function TeacherDashboard() {
       // For test/quiz sections, find the corresponding attempt details
       const attempts = section.type === 'test' ? selectedStudent?.testAttempts : selectedStudent?.quizAttempts
       const sectionAttempts = attempts?.filter(attempt => {
-        const sectionId = section.type === 'test' 
-          ? attempt.test_sections?.id 
-          : attempt.quiz_sections?.id
-        return sectionId // For now, show all attempts since we don't have direct section mapping
+        // Type guard to check which type of attempt we're dealing with
+        if (section.type === 'test') {
+          return 'test_sections' in attempt && attempt.test_sections
+        } else {
+          return 'quiz_sections' in attempt && attempt.quiz_sections
+        }
       }) || []
 
       setSelectedSection({

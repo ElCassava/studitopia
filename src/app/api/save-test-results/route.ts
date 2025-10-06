@@ -115,16 +115,26 @@ export async function POST(request: Request) {
       sampleAnswer: answers[0]
     })
 
+    // Map answers by their question ID for easier lookup
+    const answersByQuestionId = new Map()
+    answers.forEach((answer: any) => {
+      if (answer.questionId) {
+        answersByQuestionId.set(answer.questionId, answer)
+      }
+    })
+
     const attemptDetails = questions.map((question: any, index: number) => {
-      const userAnswer = answers[index]
-      const isCorrect = userAnswer?.selectedAnswer === question.correct
+      // Try to find the answer by database question ID first, then fallback to index
+      const userAnswer = answersByQuestionId.get(question.dbId || question.id) || answers[index]
+      const isCorrect = userAnswer?.isCorrect || (userAnswer?.selectedAnswer === question.correct)
       
       return {
         test_attempt_id: testAttempt.id,
-        question_id: question.id,
+        question_id: question.dbId || question.id, // Use database question ID
         selected_answer: userAnswer?.selectedAnswer?.toString() || null,
         is_correct: isCorrect,
         time_taken: userAnswer?.timeSpent || 0
+        // Note: answered_at column not available in current schema
       }
     })
 
