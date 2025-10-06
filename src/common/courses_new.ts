@@ -197,21 +197,172 @@ export async function isUserEnrolled(userId: string, courseId: string): Promise<
 // Unenroll user from a course
 export async function unenrollFromCourse(userId: string, courseId: string): Promise<boolean> {
   try {
-    console.log('Unenrolling user from course:', { userId, courseId });
+    console.log('Unenrolling user from course and cleaning up progress:', { userId, courseId });
     
     const client = supabaseAdmin || supabase;
-    const { error } = await client
+
+    // Get all course sections for this course first
+    const { data: courseSections } = await client
+      .from('course_sections')
+      .select('id')
+      .eq('course_id', courseId);
+
+    if (courseSections && courseSections.length > 0) {
+      const sectionIds = courseSections.map(s => s.id);
+
+      // Clean up user progress data in the correct order (children first)
+      console.log('Cleaning up user progress data...');
+
+      // Get learn section IDs
+      const { data: learnSections } = await client
+        .from('learn_sections')
+        .select('id')
+        .in('course_section_id', sectionIds);
+      
+      const learnSectionIds = learnSections?.map(s => s.id) || [];
+
+      // Get test section IDs  
+      const { data: testSections } = await client
+        .from('test_sections')
+        .select('id')
+        .in('course_section_id', sectionIds);
+      
+      const testSectionIds = testSections?.map(s => s.id) || [];
+
+      // Get quiz section IDs
+      const { data: quizSections } = await client
+        .from('quiz_sections')
+        .select('id')
+        .in('course_section_id', sectionIds);
+      
+      const quizSectionIds = quizSections?.map(s => s.id) || [];
+
+      // 1. Clean learn interaction details
+      if (learnSectionIds.length > 0) {
+        const { data: learnSessions } = await client
+          .from('learn_sessions')
+          .select('id')
+          .eq('user_id', userId)
+          .in('learn_section_id', learnSectionIds);
+        
+        const learnSessionIds = learnSessions?.map(s => s.id) || [];
+
+        if (learnSessionIds.length > 0) {
+          const { error: learnDetailsError } = await client
+            .from('learn_interaction_details')
+            .delete()
+            .in('learn_session_id', learnSessionIds);
+
+          if (learnDetailsError) {
+            console.warn('Error cleaning learn interaction details:', learnDetailsError);
+          }
+
+          // Clean learn sessions
+          const { error: learnSessionsError } = await client
+            .from('learn_sessions')
+            .delete()
+            .eq('user_id', userId)
+            .in('learn_section_id', learnSectionIds);
+
+          if (learnSessionsError) {
+            console.warn('Error cleaning learn sessions:', learnSessionsError);
+          }
+        }
+      }
+
+      // 2. Clean test attempt details and attempts
+      if (testSectionIds.length > 0) {
+        const { data: testAttempts } = await client
+          .from('test_attempts')
+          .select('id')
+          .eq('user_id', userId)
+          .in('test_section_id', testSectionIds);
+        
+        const testAttemptIds = testAttempts?.map(a => a.id) || [];
+
+        if (testAttemptIds.length > 0) {
+          const { error: testDetailsError } = await client
+            .from('test_attempt_details')
+            .delete()
+            .in('test_attempt_id', testAttemptIds);
+
+          if (testDetailsError) {
+            console.warn('Error cleaning test attempt details:', testDetailsError);
+          }
+
+          // Clean test attempts
+          const { error: testAttemptsError } = await client
+            .from('test_attempts')
+            .delete()
+            .eq('user_id', userId)
+            .in('test_section_id', testSectionIds);
+
+          if (testAttemptsError) {
+            console.warn('Error cleaning test attempts:', testAttemptsError);
+          }
+        }
+      }
+
+      // 3. Clean quiz attempt details and attempts
+      if (quizSectionIds.length > 0) {
+        const { data: quizAttempts } = await client
+          .from('quiz_attempts')
+          .select('id')
+          .eq('user_id', userId)
+          .in('quiz_section_id', quizSectionIds);
+        
+        const quizAttemptIds = quizAttempts?.map(a => a.id) || [];
+
+        if (quizAttemptIds.length > 0) {
+          const { error: quizDetailsError } = await client
+            .from('quiz_attempt_details')
+            .delete()
+            .in('quiz_attempt_id', quizAttemptIds);
+
+          if (quizDetailsError) {
+            console.warn('Error cleaning quiz attempt details:', quizDetailsError);
+          }
+
+          // Clean quiz attempts
+          const { error: quizAttemptsError } = await client
+            .from('quiz_attempts')
+            .delete()
+            .eq('user_id', userId)
+            .in('quiz_section_id', quizSectionIds);
+
+          if (quizAttemptsError) {
+            console.warn('Error cleaning quiz attempts:', quizAttemptsError);
+          }
+        }
+      }
+
+      // 4. Clean user section progress
+      const { error: progressError } = await client
+        .from('user_section_progress')
+        .delete()
+        .eq('user_id', userId)
+        .in('course_section_id', sectionIds);
+
+      if (progressError) {
+        console.warn('Error cleaning user section progress:', progressError);
+      }
+
+      console.log('User progress data cleaned successfully');
+    }
+
+    // Finally, delete the enrollment record
+    const { error: enrollmentError } = await client
       .from('enrollments')
       .delete()
       .eq('user_id', userId)
       .eq('course_id', courseId);
 
-    if (error) {
-      console.error('Error unenrolling from course:', error);
+    if (enrollmentError) {
+      console.error('Error deleting enrollment:', enrollmentError);
       return false;
     }
 
-    console.log('Successfully unenrolled from course');
+    console.log('Successfully unenrolled from course and cleaned up all progress data');
     return true;
   } catch (error) {
     console.error('Error in unenrollFromCourse:', error);
