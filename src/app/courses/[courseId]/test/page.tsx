@@ -8,6 +8,7 @@ import { getCourseById, Course, getUserCourseProgress, markSectionCompleted, Cou
 import { getSupabaseClient } from '@/common/network'
 import { getLearningStyleById, LearningStyle, hasLearningStyle, getCurrentUrl } from '@/utils/learningStyles'
 import LearningStyleRequiredModal from '@/components/LearningStyleRequiredModal'
+import AudioPlayer from '@/components/AudioPlayer'
 import { ArrowLeft, FileText, Clock, CheckCircle, AlertCircle } from 'lucide-react'
 
 export default function TestPage() {
@@ -29,6 +30,8 @@ export default function TestPage() {
   const [, setCompletedTestIds] = useState<Set<string>>(new Set())
   const [userLearningStyle, setUserLearningStyle] = useState<LearningStyle | null>(null)
   const [showLearningStyleModal, setShowLearningStyleModal] = useState(false)
+  const [currentQuestionAudio, setCurrentQuestionAudio] = useState<any>(null)
+  const [isAuditoryLearner, setIsAuditoryLearner] = useState(false)
 
   // Sample test data is now loaded dynamically in fetchTestSections
 
@@ -38,13 +41,6 @@ export default function TestPage() {
       
       // Get user's learning style from auth context
       const userLearningStyleId = user?.learning_style_id
-      console.log('User learning style ID:', userLearningStyleId)
-      
-      if (!userLearningStyleId) {
-        console.warn('⚠️ User has no learning style set - showing all available test sections')
-      } else {
-        console.log('✅ Filtering test sections by user learning style:', userLearningStyleId)
-      }
       
       // Get course sections with test_sections and test_questions
       let query = supabase
@@ -94,12 +90,7 @@ export default function TestPage() {
           ? testSections.filter((ts: any) => ts.style_id === userLearningStyleId)
           : testSections
         
-        console.log(`Course section ${courseSection.id}: ${testSections.length} total, ${filteredTestSections.length} matching user's learning style`)
-        
-        if (userLearningStyleId && testSections.length > 0 && filteredTestSections.length === 0) {
-          console.warn(`⚠️ No test sections match user's learning style ${userLearningStyleId} for course section ${courseSection.id}`)
-          console.log('Available style IDs in this section:', testSections.map((ts: any) => ts.style_id))
-        }
+
         
         if (filteredTestSections.length === 0) {
           // No matching test_sections for user's learning style
@@ -197,20 +188,11 @@ export default function TestPage() {
         }
       })
       
-      console.log(`🧪 Created ${enhancedSections.length} test sections for course ${courseId}`)
-      console.log('Section details:', enhancedSections.map(s => ({ 
-        title: s.title, 
-        hasQuestions: s.questions?.length > 0, 
-        styleId: s.style_id,
-        testSectionId: (s as any).test_section_id 
-      })))
+
       
       setTestSections(enhancedSections)
       
-      // If no test sections found, show appropriate message
-      if (enhancedSections.length === 0) {
-        console.log('⚠️ No test content found for this course. Course may need content setup.')
-      }
+
       
       // Fetch user's learning style name for display
       if (userLearningStyleId) {
@@ -275,7 +257,6 @@ export default function TestPage() {
       await fetchTestSections()
       
     } catch (err) {
-      console.error('Error fetching course details:', err)
       setError('Failed to load course details')
     } finally {
       setLoading(false)
@@ -300,6 +281,41 @@ export default function TestPage() {
       }
     }
   }, [user, isLoading, courseId, router, fetchCourseDetails])
+
+  // Function to get audio data for a question (using local files directly)
+  const getQuestionAudio = useCallback((questionIndex: number) => {
+    if (!isAuditoryLearner) return null
+    
+    // Map question index to audio file (Q1.mp3, Q2.mp3, etc.)
+    const audioFileName = `Q${questionIndex}.mp3`
+    const audioUrl = `/audio-files/${audioFileName}`
+    
+    // Return audio data directly without API call
+    return {
+      audio_url: audioUrl,
+      audio_title: `Question ${questionIndex} Audio`,
+      duration: 120 // Default duration
+    }
+  }, [isAuditoryLearner])
+
+  // Check if user is auditory learner
+  useEffect(() => {
+    if (user && userLearningStyle) {
+      const isAuditory = userLearningStyle.name.toLowerCase().includes('auditory') || 
+                        userLearningStyle.name.toLowerCase().includes('audio')
+      setIsAuditoryLearner(isAuditory)
+    }
+  }, [user, userLearningStyle])
+
+  // Get audio when current question changes
+  useEffect(() => {
+    if (isTestActive && isAuditoryLearner) {
+      const audioData = getQuestionAudio(currentQuestion)
+      setCurrentQuestionAudio(audioData)
+    } else {
+      setCurrentQuestionAudio(null)
+    }
+  }, [currentQuestion, isTestActive, isAuditoryLearner, getQuestionAudio])
 
   const startTest = (testIndex: number) => {
     const test = testSections[testIndex]
@@ -423,7 +439,6 @@ export default function TestPage() {
         alert('Failed to save test results')
       }
     } catch (error) {
-      console.error('Error saving test results:', error)
       alert('Error saving test results')
     }
 
@@ -696,6 +711,20 @@ export default function TestPage() {
                     <h3 className="font-semibold text-xl text-dark-gray mb-6">
                       {currentQuestionData.question}
                     </h3>
+                    
+                    {/* Audio Player for Auditory Learners */}
+                    {isAuditoryLearner && currentQuestionAudio && (
+                      <div className="mb-6">
+                        <AudioPlayer
+                          audioUrl={currentQuestionAudio.audio_url}
+                          audioTitle={currentQuestionAudio.audio_title}
+                          duration={currentQuestionAudio.duration}
+                          className="max-w-lg"
+                        />
+                      </div>
+                    )}
+                    
+
                     
                     <div className="space-y-3">
                       {currentQuestionData.options.map((option: string, index: number) => (
