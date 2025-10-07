@@ -40,7 +40,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess
       } else {
         setMessage('Login successful!')
 
-        refreshUser()
+        await refreshUser()
         setTimeout(() => {
           onClose()
           setUsername('')

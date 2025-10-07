@@ -19,8 +19,8 @@ export default function LearningStyleRequiredModal({
 
   const handleTakeTest = () => {
     const testUrl = returnUrl 
-      ? `/learning-style-test?returnUrl=${encodeURIComponent(returnUrl)}`
-      : '/learning-style-test'
+      ? `/learning-style`
+      : '/learning-style'
     router.push(testUrl)
   }
 

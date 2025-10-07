@@ -74,6 +74,7 @@ export interface CourseSection {
 // Interface for quiz/test questions
 export interface Question {
   id?: number;
+  dbId?: string; // Database question ID for proper audio mapping
   question: string;
   options: string[];
   correct: number;

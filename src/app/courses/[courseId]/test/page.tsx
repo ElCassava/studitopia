@@ -282,19 +282,15 @@ export default function TestPage() {
     }
   }, [user, isLoading, courseId, router, fetchCourseDetails])
 
-  // Function to get audio data for a question (using local files directly)
-  const getQuestionAudio = useCallback((questionIndex: number) => {
-    if (!isAuditoryLearner) return null
+  // Function to get audio data for a question using local files
+  const getQuestionAudio = useCallback((questionNumber: number) => {
+    if (!isAuditoryLearner || !questionNumber) return null
     
-    // Map question index to audio file (Q1.mp3, Q2.mp3, etc.)
-    const audioFileName = `Q${questionIndex}.mp3`
-    const audioUrl = `/audio-files/${audioFileName}`
-    
-    // Return audio data directly without API call
+    // Return local audio file path directly mapped to question number
     return {
-      audio_url: audioUrl,
-      audio_title: `Question ${questionIndex} Audio`,
-      duration: 120 // Default duration
+      audio_url: `/audio-files/Q${questionNumber}.mp3`,
+      audio_title: `Question ${questionNumber} Audio`,
+      duration: null // Duration will be determined by the audio player
     }
   }, [isAuditoryLearner])
 
@@ -724,10 +720,9 @@ export default function TestPage() {
                       </div>
                     )}
                     
-
-                    
                     <div className="space-y-3">
-                      {currentQuestionData.options.map((option: string, index: number) => (
+                      {currentQuestionData.options && currentQuestionData.options.length > 0 ? (
+                        currentQuestionData.options.map((option: string, index: number) => (
                         <button
                           key={index}
                           onClick={() => handleAnswerSelect(currentQuestion, index)}
@@ -750,7 +745,13 @@ export default function TestPage() {
                             <span className="text-gray-700">{option}</span>
                           </div>
                         </button>
-                      ))}
+                      ))
+                      ) : (
+                        <div className="text-center p-8 bg-red-50 border border-red-200 rounded-lg">
+                          <p className="text-red-600 font-medium">No answer choices available for this question</p>
+                          <p className="text-red-500 text-sm mt-2">This might be a data loading issue. Please refresh the page or contact support.</p>
+                        </div>
+                      )}
                     </div>
                   </>
                 )}

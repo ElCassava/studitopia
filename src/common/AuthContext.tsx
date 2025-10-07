@@ -1,13 +1,14 @@
 'use client'
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { getCurrentUser, logout as authLogout, User } from './auth'
+import { getSupabaseClient } from './network'
 
 interface AuthContextType {
   user: User | null
   isLoading: boolean
   login: (user: User) => void
   logout: () => Promise<void>
-  refreshUser: () => void
+  refreshUser: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -21,16 +22,55 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true)
   const [isHydrated, setIsHydrated] = useState(false)
 
-  const refreshUser = () => {
+  const refreshUser = async () => {
     const currentUser = getCurrentUser()
-    setUser(currentUser)
+    if (!currentUser) {
+      setUser(null)
+      return
+    }
+    
+    try {
+      // Fetch fresh user data from database
+      const supabase = getSupabaseClient()
+      const { data: freshUserData, error } = await supabase
+        .from('users')
+        .select('id, username, email, role, created_at, learning_style_id')
+        .eq('id', currentUser.id)
+        .single()
+      
+      if (error) {
+        console.error('Error refreshing user data:', error)
+        setUser(currentUser) // Fallback to cached data
+        return
+      }
+      
+      // Update localStorage with fresh data
+      const updatedUser = {
+        id: freshUserData.id,
+        username: freshUserData.username,
+        email: freshUserData.email,
+        role: freshUserData.role,
+        created_at: freshUserData.created_at,
+        learning_style_id: freshUserData.learning_style_id
+      }
+      
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('currentUser', JSON.stringify(updatedUser))
+        document.cookie = `currentUser=${encodeURIComponent(JSON.stringify(updatedUser))}; path=/; max-age=86400`
+      }
+      
+      setUser(updatedUser)
+    } catch (error) {
+      console.error('Error in refreshUser:', error)
+      setUser(currentUser) // Fallback to cached data
+    }
   }
 
   useEffect(() => {
     // Use a small timeout to prevent flickering on fast connections
-    const timer = setTimeout(() => {
+    const timer = setTimeout(async () => {
       setIsHydrated(true)
-      refreshUser()
+      await refreshUser()
       setIsLoading(false)
     }, 50) // Very brief delay to prevent flash
 
@@ -39,7 +79,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Listen for storage changes to handle login/logout from other tabs
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'currentUser') {
-        refreshUser()
+        refreshUser().catch(console.error)
       }
     }
 
