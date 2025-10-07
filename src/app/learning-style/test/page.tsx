@@ -4,6 +4,7 @@ import { useAuth } from '@/common/AuthContext'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
+import { getSupabaseClient } from '@/common/network'
 
 const results = [
   {
@@ -123,7 +124,7 @@ type LearningStyle = 'visual' | 'auditory' | 'kinesthetic';
 type Scores = Record<LearningStyle, number>;
 
 export default function LearningStyleTestPage() {
-  const { user, isLoading } = useAuth()
+  const { user, isLoading, refreshUser } = useAuth()
   const router = useRouter()
   const [step, setStep] = useState(1)
   const [currentQuestion, setCurrentQuestion] = useState(0)
@@ -134,6 +135,7 @@ export default function LearningStyleTestPage() {
     kinesthetic: 0
   });
   const [dominantStyle, setDominantStyle] = useState<LearningStyle | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -173,9 +175,16 @@ export default function LearningStyleTestPage() {
     setStep(10)
   }
 
-  const handleStyleSelect = (type: LearningStyle) => {
+  const handleStyleSelect = async (type: LearningStyle) => {
     setDominantStyle(type);
-    setStep(9);
+    
+    // Save the learning style immediately for manual selection
+    const success = await saveLearningStyle(type)
+    if (success) {
+      setStep(9);
+    } else {
+      alert('Terjadi kesalahan saat menyimpan gaya belajar. Silakan coba lagi.')
+    }
   }
 
   const handleChangeAnswer = () => {
@@ -237,6 +246,77 @@ export default function LearningStyleTestPage() {
     setDominantStyle(null);
     setStep(1);
   };
+
+  // Save learning style to user profile
+  const saveLearningStyle = async (styleName: string): Promise<boolean> => {
+    if (!user) {
+      console.error('❌ No user found in saveLearningStyle')
+      return false
+    }
+    
+    console.log('🚀 Starting saveLearningStyle for:', styleName, 'User ID:', user.id)
+    setIsSaving(true)
+    
+    try {
+      // RLS is disabled, so regular client should work fine
+      const supabase = getSupabaseClient()
+      console.log('🔧 Using regular client (RLS disabled)')
+      
+      // Map frontend style names to database names
+      const styleNameMap: Record<string, string> = {
+        'visual': 'Visual',
+        'auditory': 'Auditory', 
+        'kinesthetic': 'Kinesthetic'
+      }
+      
+      const dbStyleName = styleNameMap[styleName] || styleName
+      console.log('🎨 Looking for learning style:', dbStyleName)
+      
+      // Get learning style ID
+      const { data: style, error: styleError } = await supabase
+        .from('learning_styles')
+        .select('id')
+        .eq('name', dbStyleName)
+        .single()
+      
+      if (styleError || !style) {
+        console.error('❌ Could not find learning style:', styleError)
+        return false
+      }
+      
+      console.log('✅ Found learning style ID:', style.id)
+      
+      // Update user's learning style using admin client to bypass RLS
+      console.log('💾 Updating user learning style in database...')
+      const { data: updateResult, error: updateError } = await supabase
+        .from('users')
+        .update({ learning_style_id: style.id })
+        .eq('id', user.id)
+        .select('id, username, learning_style_id')
+      
+      if (updateError) {
+        console.error('❌ Failed to update user learning style:', updateError)
+        console.error('❌ Update details:', {
+          userId: user.id,
+          styleId: style.id
+        })
+        return false
+      }
+      
+      console.log('✅ Successfully updated user:', updateResult)
+      
+      // Refresh user data in auth context
+      console.log('🔄 Refreshing user data...')
+      await refreshUser()
+      
+      return true
+    } catch (error) {
+      console.error('❌ Error in saveLearningStyle:', error)
+      return false
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
   return (
     <>
@@ -533,10 +613,20 @@ export default function LearningStyleTestPage() {
 
             <div className="flex flex-col items-center gap-3">
               <button
-                onClick={() => router.push('/courses')}
-                className="w-80 bg-bright-green hover:bg-[#5AB126] border-b-4 border-green text-white font-semibold text-2xl px-8 py-3 rounded-lg transition-all"
+                onClick={async () => {
+                  if (dominantStyle) {
+                    const success = await saveLearningStyle(dominantStyle)
+                    if (success) {
+                      router.push('/courses')
+                    } else {
+                      alert('Terjadi kesalahan saat menyimpan gaya belajar. Silakan coba lagi.')
+                    }
+                  }
+                }}
+                disabled={isSaving}
+                className="w-80 bg-bright-green hover:bg-[#5AB126] border-b-4 border-green text-white font-semibold text-2xl px-8 py-3 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Mari Mulai Belajar
+                {isSaving ? 'Menyimpan...' : 'Mari Mulai Belajar'}
               </button>
               <button
                 onClick={handleRetakeTest}
@@ -568,21 +658,24 @@ export default function LearningStyleTestPage() {
             <div className="flex flex-col items-center gap-3">
               <button
                 onClick={() => handleStyleSelect('visual')}
-                className="w-70 bg-bright-green hover:bg-[#5AB126] border-b-4 border-green text-white font-semibold text-2xl px-14 py-3 rounded-lg transition-all"
+                disabled={isSaving}
+                className="w-70 bg-bright-green hover:bg-[#5AB126] border-b-4 border-green text-white font-semibold text-2xl px-14 py-3 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Visual
+                {isSaving ? 'Menyimpan...' : 'Visual'}
               </button>
               <button
                 onClick={() => handleStyleSelect('auditory')}
-                className="w-70 bg-bright-green hover:bg-[#5AB126] border-b-4 border-green text-white font-semibold text-2xl px-14 py-3 rounded-lg transition-all"
+                disabled={isSaving}
+                className="w-70 bg-bright-green hover:bg-[#5AB126] border-b-4 border-green text-white font-semibold text-2xl px-14 py-3 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Auditori
+                {isSaving ? 'Menyimpan...' : 'Auditori'}
               </button>
               <button
                 onClick={() => handleStyleSelect('kinesthetic')}
-                className="w-70 bg-bright-green hover:bg-[#5AB126] border-b-4 border-green text-white font-semibold text-2xl px-14 py-3 rounded-lg transition-all"
+                disabled={isSaving}
+                className="w-70 bg-bright-green hover:bg-[#5AB126] border-b-4 border-green text-white font-semibold text-2xl px-14 py-3 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Kinestetik
+                {isSaving ? 'Menyimpan...' : 'Kinestetik'}
               </button>
               <button
                 onClick={handleChangeAnswer}
