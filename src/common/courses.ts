@@ -76,6 +76,7 @@ export interface Question {
   id?: number;
   dbId?: string; // Database question ID for proper audio mapping
   question: string;
+  image_url?: string; // Image URL for visual learners
   options: string[];
   correct: number;
   explanation?: string;

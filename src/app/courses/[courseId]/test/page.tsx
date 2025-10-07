@@ -10,6 +10,7 @@ import { getLearningStyleById, LearningStyle, hasLearningStyle, getCurrentUrl } 
 import LearningStyleRequiredModal from '@/components/LearningStyleRequiredModal'
 import AudioPlayer from '@/components/AudioPlayer'
 import { ArrowLeft, FileText, Clock, CheckCircle, AlertCircle } from 'lucide-react'
+import Image from 'next/image'
 
 export default function TestPage() {
   const params = useParams()
@@ -32,6 +33,7 @@ export default function TestPage() {
   const [showLearningStyleModal, setShowLearningStyleModal] = useState(false)
   const [currentQuestionAudio, setCurrentQuestionAudio] = useState<any>(null)
   const [isAuditoryLearner, setIsAuditoryLearner] = useState(false)
+  const [isVisualLearner, setIsVisualLearner] = useState(false)
 
   // Sample test data is now loaded dynamically in fetchTestSections
 
@@ -55,6 +57,7 @@ export default function TestPage() {
             test_questions (
               id,
               question_text,
+              image_url,
               correct_answer,
               test_choices (
                 id,
@@ -159,6 +162,7 @@ export default function TestPage() {
                 id: qIndex + 1, // UI question number (1-based)
                 dbId: q.id, // Actual database question ID for tracking
                 question: q.question_text,
+                image_url: q.image_url, // Include image URL for visual learners
                 options: choices.map((choice: any) => choice.choice_text),
                 correct: correctIndex >= 0 ? correctIndex : 0
               }
@@ -299,7 +303,9 @@ export default function TestPage() {
     if (user && userLearningStyle) {
       const isAuditory = userLearningStyle.name.toLowerCase().includes('auditory') || 
                         userLearningStyle.name.toLowerCase().includes('audio')
+      const isVisual = userLearningStyle.name.toLowerCase().includes('visual')
       setIsAuditoryLearner(isAuditory)
+      setIsVisualLearner(isVisual)
     }
   }, [user, userLearningStyle])
 
@@ -717,6 +723,26 @@ export default function TestPage() {
                           duration={currentQuestionAudio.duration}
                           className="max-w-lg"
                         />
+                      </div>
+                    )}
+                    
+                    {/* Image for Visual Learners */}
+                    {isVisualLearner && currentQuestionData.image_url && (
+                      <div className="mb-6 flex justify-center">
+                        <div className="relative max-w-lg w-full">
+                          <Image
+                            src={currentQuestionData.image_url}
+                            alt={`Visual aid for question ${currentQuestion}`}
+                            width={500}
+                            height={300}
+                            className="rounded-lg border border-gray-200 shadow-sm"
+                            style={{ objectFit: 'contain' }}
+                            onError={(e) => {
+                              console.error('Failed to load image:', currentQuestionData.image_url);
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
+                        </div>
                       </div>
                     )}
                     
